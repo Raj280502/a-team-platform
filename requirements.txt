@@ -1,0 +1,22 @@
+# Core Python
+python-dotenv
+pydantic
+
+# LangChain (modern)
+langchain
+langchain-core
+langchain-community
+langgraph
+
+# Hugging Face Inference
+huggingface-hub
+transformers
+torch
+accelerate
+
+# Web framework (later use)
+fastapi
+uvicorn
+
+# Utilities
+requests
