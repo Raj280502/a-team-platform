@@ -13,11 +13,11 @@ from langchain_core.runnables import RunnableSequence
 from langchain_core.output_parsers import PydanticOutputParser
 
 from app.core.llm import get_llm
-from app.agents.coder.prompt import coder_prompt
+from app.agents.coder.prompt import generate_prompt, repair_prompt
 from app.agents.coder.schema import CoderOutput
 
 
-def build_coder_node() -> RunnableSequence:
+def build_generate_node() -> RunnableSequence:
     """
     Builds and returns the Coder agent runnable.
 
@@ -28,18 +28,38 @@ def build_coder_node() -> RunnableSequence:
 
     llm = get_llm()
 
-    output_parser = PydanticOutputParser(
+    parser = PydanticOutputParser(
         pydantic_object=CoderOutput
     )
 
-    prompt_with_formatting = coder_prompt.partial(
-        format_instructions=output_parser.get_format_instructions()
+    prompt_with_formatting = generate_prompt.partial(
+        format_instructions=parser.get_format_instructions()
     )
 
-    coder_chain = (
+    return (
         prompt_with_formatting
         | llm
-        | output_parser
+        | parser
+    )
+def build_repair_node() -> RunnableSequence:
+    """
+    Builds the coder node responsible for LOCALIZED REPAIR.
+
+    Used ONLY when tests fail.
+    """
+
+    llm = get_llm()
+
+    parser = PydanticOutputParser(
+        pydantic_object=CoderOutput
     )
 
-    return coder_chain
+    prompt_with_formatting = repair_prompt.partial(
+        format_instructions=parser.get_format_instructions()
+    )
+
+    return (
+        prompt_with_formatting
+        | llm
+        | parser
+    )

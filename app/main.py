@@ -6,16 +6,26 @@ Entry point of the A-Team AI Platform.
 Currently used only to verify that
 core setup works correctly.
 """
+from pathlib import Path
+
 from app.agents.strategist.node import build_strategist_node
 from app.agents.architect.node import build_architect_node
-from app.agents.coder.node import build_coder_node
+from app.agents.coder.node import (
+    build_generate_node,
+    build_repair_node
+)
+from app.agents.tester.node import tester_node
+from app.runtime.test_runner import run_basic_backend_test
 from app.utils.file_ops import write_files
-from pathlib import Path
+
 
 def main():
     strategist = build_strategist_node()
     architect = build_architect_node()
-    coder = build_coder_node()
+    generate_coder  = build_generate_node()
+    repair_coder = build_repair_node()
+    
+    
     strategist_output = strategist.invoke(
         {
             "user_prompt": "Build a React todo app using Flask"
@@ -34,19 +44,60 @@ def main():
     print("\n--- ARCHITECT OUTPUT ---")
     print(architect_output)
     
-    # 3. Coder
-    coder_output = coder.invoke(
+    project_dir = Path("workspace/generated_projects/todo_app")
+    # ONE retry only (important)
+    
+    coder_output = generate_coder.invoke(
         {
             "project_scope": strategist_output.model_dump(),
             "architecture": architect_output.model_dump(),
         }
     )
-    # 4. Write files
-    project_dir = Path("workspace/generated_projects/todo_app")
-    write_files(project_dir, coder_output.files)
+    
+    if not coder_output.new_files:
+        raise RuntimeError("Initial generation failed: no files returned")
+    
+    
 
-    print("\nProject files generated at:")
-    print(project_dir.resolve())
+    write_files(project_dir, coder_output.new_files)
+    test_result = run_basic_backend_test(project_dir)
+    tester_output = tester_node(test_result)
+    print("\nInitial test result:", tester_output)
+    
+    if not tester_output.tests_passed:
+        print("\nAttempting localized repair...")
+
+        repair_output = repair_coder.invoke(
+            {
+                "existing_files": {
+                    path: (project_dir / path).read_text(encoding="utf-8")
+                    for path in [
+                        p.relative_to(project_dir).as_posix()
+                        for p in project_dir.rglob("*")
+                        if p.is_file()
+                    ]
+                },
+                "error_message": tester_output.error_message,
+            }
+        )
+        if not repair_output.modified_files:
+            raise RuntimeError("Repair failed: no modified files returned")
+
+        # Apply patches ONLY
+        write_files(project_dir, repair_output.modified_files)
+
+        # Re-test
+        test_result = run_basic_backend_test(project_dir)
+        tester_output = tester_node(test_result)
+
+        print("\nPost-repair test result:", tester_output)
+
+    if tester_output.tests_passed:
+        print("\n✅ Pipeline completed successfully.")
+    else:
+        print("\n❌ Pipeline failed after repair.")
+
+    
 
 
 
