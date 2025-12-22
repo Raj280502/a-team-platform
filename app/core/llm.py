@@ -40,7 +40,7 @@ def get_llm():
             huggingfacehub_api_token=api_key,
         )
 
-        _llm_instance = ChatHuggingFace(llm=endpoint, temperature=0, max_new_tokens=256, do_sample=True, top_p=0.95)
+        _llm_instance = ChatHuggingFace(llm=endpoint, temperature=0, max_new_tokens=1000, do_sample=True, top_p=0.95)
        
     return _llm_instance
 print("LLM module loaded. Use get_llm() to access the model.")
