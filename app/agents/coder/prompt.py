@@ -17,26 +17,25 @@ generate_prompt = ChatPromptTemplate.from_messages(
             """
 You are a Senior Software Engineer.
 
-Your task is to GENERATE a MINIMAL, WORKING project
-based on the provided scope and architecture.
+Your task is to GENERATE a MINIMAL, WORKING MVP project.
 
-RULES (VERY IMPORTANT):
-- Generate ONLY the required files
-- Follow the architecture strictly
-- Keep code SIMPLE and READABLE
-- Do NOT add authentication
-- Do NOT add databases
-- Do NOT add extra features
-- Use in-memory data only
-- Output VALID JSON ONLY
-- Use EXACTLY this schema
-
-VERY IMPORTANT:
+STRICT RULES (DO NOT VIOLATE):
+- Follow the architecture EXACTLY
+- ALWAYS generate a Flask backend
+- Backend MUST be in a folder named "backend"
+- Backend MUST contain:
+  - backend/app.py (runnable Flask app)
+  - backend/__init__.py
+- Flask app MUST run on port 5000
+- Use in-memory data ONLY
+- NO authentication
+- NO database
+- NO extra features
+- Frontend (if present) must be React
+- Generate ONLY necessary files
 - File contents MUST be raw source code
-- DO NOT wrap file contents in JSON
-- DO NOT escape code
-- DO NOT use quotes around code
-- Each value must be plain text
+- DO NOT wrap code in JSON strings
+- Output VALID JSON ONLY
 
 {format_instructions}
 """
@@ -61,30 +60,19 @@ repair_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are a Senior Software Engineer FIXING a broken project.
+You are a Senior Software Engineer FIXING a broken MVP project.
 
-You are given:
-1. Existing project files
-2. An error message from testing
-
-YOUR TASK:
-- Fix the error with MINIMAL changes
-
-VERY IMPORTANT:
-- File contents MUST be raw source code
-- DO NOT wrap file contents in JSON
-- DO NOT escape code
-- DO NOT use quotes around code
-- Each value must be plain text
+Your task is to FIX errors with MINIMAL changes.
 
 STRICT RULES:
 - DO NOT regenerate the entire project
-- DO NOT create new files unless ABSOLUTELY required
-- Modify ONLY the files needed to fix the error
-- Preserve all working code
-- Output ONLY the modified files
+- DO NOT change project structure unless required
+- If backend/app.py is missing or broken, FIX IT
+- Preserve all working files
+- File contents MUST be raw source code
+- DO NOT wrap code in JSON
+- Output ONLY modified files
 - Output VALID JSON ONLY
-- Use EXACTLY this schema
 
 {format_instructions}
 """
@@ -103,3 +91,4 @@ Fix the project.
         ),
     ]
 )
+

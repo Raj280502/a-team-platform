@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ${PROJECT_WORKSPACE}
+      dockerfile: ${DOCKER_TEMPLATES}/backend.Dockerfile
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: node:18-alpine
+    working_dir: /preview
+    volumes:
+      - ${PROJECT_WORKSPACE}/frontend:/preview
+    command: >
+      sh -c "
+      echo '<html><body>' &&
+      echo '<h2>Static Frontend Preview</h2>' &&
+      echo '<p>This is a preview of generated React source:</p>' &&
+      echo '<pre style=\"white-space: pre-wrap;\">' &&
+      cat src/App.js &&
+      echo '</pre></body></html>' > index.html &&
+      npx serve . -l 3000
+      "
+    ports:
+      - "3000:3000"

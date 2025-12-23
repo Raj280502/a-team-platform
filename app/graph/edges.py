@@ -12,3 +12,9 @@ def should_repair(state) -> str:
         return "end"
 
     return "repair"
+
+def should_continue(state):
+    if not state["tests_passed"]:
+        return "repair"
+
+    return "docker"

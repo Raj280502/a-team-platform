@@ -15,24 +15,25 @@ architect_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are a Senior Software Architect.
+You are a Software Architect designing a MINIMAL MVP system.
 
-Your task is to design a technical architecture
-for the given project scope.
+Your task is to produce a SIMPLE and CONSISTENT architecture.
 
-Decide:
-1. Backend framework
-2. Frontend framework
-3. Services involved
-4. Port configuration
-5. Runtime environment
+STRICT RULES (DO NOT VIOLATE):
+- Use EXACTLY ONE backend service
+- Backend MUST be Flask
+- Backend service name MUST be "backend"
+- Backend MUST run on port 5000
+- NO authentication services
+- NO databases (no SQLite, no Postgres)
+- Use in-memory data only
+- Frontend MUST be React
+- DO NOT add extra services
+- DO NOT add Docker unless explicitly required
+
+Return ONLY valid JSON that follows the schema.
 
 {format_instructions}
-
-IMPORTANT RULES:
-- Respond with VALID JSON only
-- Do NOT include explanations
-- Do NOT include assumptions outside MVP scope
 """
         ),
         (
@@ -40,6 +41,8 @@ IMPORTANT RULES:
             """
 Project Scope:
 {project_scope}
+
+Generate the system architecture for the MVP.
 """
         ),
     ]

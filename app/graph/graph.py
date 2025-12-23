@@ -7,6 +7,8 @@ from app.graph.nodes.generate_node import generate_node
 from app.graph.nodes.test_node import test_node
 from app.graph.nodes.repair_node import repair_node
 from app.graph.edges import should_repair
+from app.graph.nodes.write_files_node import write_files_node
+from app.graph.nodes.docker_node import docker_node
 
 
 def build_graph():
@@ -17,12 +19,18 @@ def build_graph():
     graph.add_node("generate", generate_node)
     graph.add_node("test", test_node)
     graph.add_node("repair", repair_node)
+    graph.add_node("write_files", write_files_node)
+    graph.add_node("docker", docker_node)
+
 
     graph.set_entry_point("strategist")
 
     graph.add_edge("strategist", "architect")
     graph.add_edge("architect", "generate")
-    graph.add_edge("generate", "test")
+    graph.add_edge("generate", "write_files")
+    graph.add_edge("write_files", "test")
+    graph.add_edge("test", "docker")
+
 
     graph.add_conditional_edges(
         "test",
@@ -33,6 +41,7 @@ def build_graph():
         }
     )
 
-    graph.add_edge("repair", "test")
+    graph.add_edge("repair", "write_files")
+
 
     return graph.compile()
