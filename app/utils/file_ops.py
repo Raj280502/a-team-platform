@@ -12,7 +12,7 @@ AI agents NEVER write files directly.
 """
 
 from pathlib import Path
-
+import re
 
 def normalize_code(content: str) -> str:
     """
@@ -27,15 +27,11 @@ def normalize_code(content: str) -> str:
     """
     content = content.strip()
 
-    # Detect JSON-wrapped code
-    if content.startswith("{") and content.endswith("}"):
-        content = content.strip("{}")
+    # Remove all markdown fences robustly
+    content = re.sub(r"^```[a-zA-Z]*\s*", "", content)
+    content = re.sub(r"\s*```$", "", content)
 
-        # Unescape common JSON escape sequences
-        content = content.replace("\\n", "\n")
-        content = content.replace('\\"', '"')
-
-    return content
+    return content.strip()
 
 
 def write_files(base_dir: Path, files: dict[str, str]):

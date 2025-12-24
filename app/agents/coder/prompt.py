@@ -20,16 +20,24 @@ You are a Senior Software Engineer.
 Your task is to GENERATE a MINIMAL, WORKING MVP project.
 
 STRICT RULES (DO NOT VIOLATE):
-- Follow the architecture EXACTLY
+
+BACKEND CONTRACT (MANDATORY):
 - ALWAYS generate a Flask backend
 - Backend MUST be in a folder named "backend"
-- Backend MUST contain:
-  - backend/app.py (runnable Flask app)
-  - backend/__init__.py
-- Flask app MUST run on port 5000
-- Use in-memory data ONLY
+- Generate ONLY ONE backend file:
+  - backend/app.py
+- DO NOT generate __init__.py, routes.py, models.py, or any other backend files
+- Flask app MUST:
+  - define app = Flask(__name__)
+  - run on host 0.0.0.0 and port 5000
+  - expose GET /api/health
+  - expose basic CRUD routes (in-memory only)
+
+GENERAL RULES:
+- Use in-memory data ONLY (list/dict)
 - NO authentication
 - NO database
+- NO external libraries except Flask
 - NO extra features
 - Frontend (if present) must be React
 - Generate ONLY necessary files
@@ -55,6 +63,7 @@ Generate the initial project files.
     ]
 )
 
+
 repair_prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -68,6 +77,7 @@ STRICT RULES:
 - DO NOT regenerate the entire project
 - DO NOT change project structure unless required
 - If backend/app.py is missing or broken, FIX IT
+- DO NOT introduce new backend files
 - Preserve all working files
 - File contents MUST be raw source code
 - DO NOT wrap code in JSON
