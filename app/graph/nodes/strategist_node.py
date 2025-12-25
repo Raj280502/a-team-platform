@@ -9,5 +9,4 @@ def strategist_node(state: ProjectState) -> ProjectState:
         {"user_prompt": state["user_prompt"]}
     )
 
-    state["project_scope"] = result.model_dump()
-    return state
+    return {"project_scope": result.model_dump()}

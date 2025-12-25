@@ -6,7 +6,7 @@ from app.core.state import ProjectState
 
 def repair_node(state: ProjectState) -> ProjectState:
     repairer = build_repair_node()
-    project_dir = Path("workspace/generated_projects/todo_app")
+    project_dir = Path("app/workspace/generated_projects/todo_app")
 
     existing_files = {
         p.relative_to(project_dir).as_posix(): p.read_text(encoding="utf-8")
@@ -21,7 +21,4 @@ def repair_node(state: ProjectState) -> ProjectState:
         }
     )
 
-    state["files"] = result.modified_files or {}
-    state["repair_attempts"] += 1   # 👈 IMPORTANT
-
-    return state
+    return {"files": result.modified_files or {}, "repair_attempts": state.get("repair_attempts", 0) + 1}

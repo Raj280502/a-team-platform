@@ -9,5 +9,14 @@ def architect_node(state: ProjectState) -> ProjectState:
         {"project_scope": state["project_scope"]}
     )
 
-    state["architecture"] = result.model_dump()
-    return state
+    return {
+        "architecture": result.model_dump(),
+        "file_plan": [
+            "backend/app.py",
+            "frontend/package.json",
+            "frontend/index.html",
+            "frontend/vite.config.js",
+            "frontend/src/main.jsx",
+            "frontend/src/App.jsx",
+        ]
+    }

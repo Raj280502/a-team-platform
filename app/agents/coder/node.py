@@ -63,3 +63,24 @@ def build_repair_node() -> RunnableSequence:
         | llm
         | parser
     )
+
+
+from app.utils.file_ops import normalize_code
+
+
+def coder_node(state):
+    llm = get_llm()
+
+    generated_files = {}
+
+    for file_path in state["planned_files"]:
+        file_chain = single_file_prompt | llm
+        content = file_chain.invoke({
+            "file_path": file_path,
+            "project_scope": state["project_scope"],
+            "architecture": state["architecture"],
+        })
+
+        generated_files[file_path] = normalize_code(content.content)
+
+    return CoderOutput(new_files=generated_files)

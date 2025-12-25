@@ -68,19 +68,19 @@ def get_llm(role: str = "default"):
         # Heavy reasoning model
         if role in ("strategist", "architect"):
             _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-72B-Instruct", max_tokens=2048
+                "Qwen/Qwen2.5-72B-Instruct", max_tokens=204
             )
 
         # Fast, deterministic code model
         elif role in ("coder", "repair"):
             _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-7B-Instruct", max_tokens=6000
+                "Qwen/Qwen2.5-7B-Instruct", max_tokens=600
             )
 
         # Fallback
         else:
             _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-7B-Instruct", max_tokens=2048
+                "Qwen/Qwen2.5-7B-Instruct", max_tokens=204
             )
 
     return _LLM_POOL[role]

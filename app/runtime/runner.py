@@ -14,16 +14,20 @@ def run_project(project_dir: Path):
     Build and run the generated project using docker compose.
     """
 
-    compose_dir = Path("app/runtime/docker").resolve()
-
+    project_dir.mkdir(parents=True, exist_ok=True)   # 🔥 WINDOWS FIX
     env = os.environ.copy()
     env["PROJECT_WORKSPACE"] = str(project_dir.resolve())
-    env["DOCKER_TEMPLATES"] = str(compose_dir.resolve())
 
     try:
         subprocess.run(
-            ["docker", "compose", "up", "--build"],
-            cwd=compose_dir,
+            ["docker", "compose", "-f", "docker/docker-compose.yml", "build", "--no-cache"],
+            cwd=project_dir,
+            env=env,
+            check=True,
+        )
+        subprocess.run(
+            ["docker", "compose", "-f", "docker/docker-compose.yml", "up"],
+            cwd=project_dir,
             env=env,
             check=True,
         )

@@ -3,7 +3,12 @@ from typing import Dict, List, Optional
 from enum import Enum
 import re
     
-  
+
+class FileManifest(BaseModel):
+    """
+    List of files to generate.
+    """
+    files: List[str] = Field(description="List of relative file paths to generate")
 
 class CoderOutput(BaseModel):
     """

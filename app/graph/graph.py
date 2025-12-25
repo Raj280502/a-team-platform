@@ -6,6 +6,7 @@ from app.graph.nodes.architect_node import architect_node
 
 from app.graph.nodes.coder_plan_node import coder_plan_node
 from app.graph.nodes.coder_file_node import coder_file_node
+from app.graph.nodes.docker_scaffold_node import docker_scaffold_node
 
 from app.graph.nodes.test_node import test_node
 from app.graph.nodes.repair_node import repair_node
@@ -28,6 +29,7 @@ def build_graph():
     graph.add_node("test", test_node)
     graph.add_node("repair", repair_node)
     graph.add_node("docker", docker_node)
+    graph.add_node("docker_scaffold", docker_scaffold_node)
 
     graph.set_entry_point("strategist")
 
@@ -36,7 +38,8 @@ def build_graph():
     graph.add_edge("coder_plan", "coder_file")
     graph.add_edge("coder_file", "write_files")
     graph.add_edge("write_files", "test")
-    graph.add_edge("test", "docker")
+    graph.add_edge("test", "docker_scaffold")
+    graph.add_edge("docker_scaffold", "docker")
 
     graph.add_conditional_edges(
         "test",
