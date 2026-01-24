@@ -13,11 +13,14 @@ class ProjectState(TypedDict,total=False):
     user_prompt: Annotated[str, LastValue]
     project_scope: Annotated[dict, LastValue]
     architecture: Annotated[dict, LastValue]
+    contract: Annotated[dict, LastValue]
     file_plan: Annotated[List[str], LastValue]
     files: Annotated[Dict[str, str], LastValue]
     tests_passed: Annotated[bool, LastValue]
     error_message: Annotated[Optional[str], LastValue]
-    repair_attempts: Annotated[int, LastValue] 
+    contract_report: Annotated[dict, LastValue]
+    repair_attempts: Annotated[int, LastValue]
+    project_dir: Annotated[str, LastValue] 
     
     
     # # User input

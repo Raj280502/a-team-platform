@@ -46,6 +46,9 @@ def build_repair_node() -> RunnableSequence:
     Builds the coder node responsible for LOCALIZED REPAIR.
 
     Used ONLY when tests fail.
+    
+    Note: Does NOT use strict Pydantic parser to handle LLM output
+    with code strings that may have unescaped quotes.
     """
 
     llm = get_llm()
@@ -58,10 +61,10 @@ def build_repair_node() -> RunnableSequence:
         format_instructions=parser.get_format_instructions()
     )
 
+    # Return without parser - we'll handle parsing manually in repair_node
     return (
         prompt_with_formatting
         | llm
-        | parser
     )
 
 

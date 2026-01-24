@@ -1,24 +1,30 @@
 from pathlib import Path
-
 from app.agents.coder.node import build_repair_node
-from app.core.state import ProjectState
+from app.runtime.failure_compiler import compile_failure
+from app.utils.file_ops import normalize_code
 
 
-def repair_node(state: ProjectState) -> ProjectState:
+def repair_node(state):
+    project_dir = Path(state["project_dir"])
+    backend_file = project_dir / "backend" / "app.py"
+
+    if not backend_file.exists():
+        return {"repair_attempts": state.get("repair_attempts", 0) + 1}
+
+    broken_code = backend_file.read_text(encoding="utf-8")
+    failure_report = compile_failure(project_dir, state["error_message"])
+
     repairer = build_repair_node()
-    project_dir = Path("app/workspace/generated_projects/todo_app")
 
-    existing_files = {
-        p.relative_to(project_dir).as_posix(): p.read_text(encoding="utf-8")
-        for p in project_dir.rglob("*")
-        if p.is_file()
-    }
-
-    result = repairer.invoke(
+    fixed_code = repairer.invoke(
         {
-            "existing_files": existing_files,
-            "error_message": state["error_message"],
+            "broken_file": broken_code,
+            "failure_report": failure_report,
         }
-    )
+    ).content
 
-    return {"files": result.modified_files or {}, "repair_attempts": state.get("repair_attempts", 0) + 1}
+    backend_file.write_text(normalize_code(fixed_code), encoding="utf-8")
+
+    return {
+        "repair_attempts": state.get("repair_attempts", 0) + 1
+    }

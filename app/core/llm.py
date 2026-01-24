@@ -74,7 +74,7 @@ def get_llm(role: str = "default"):
         # Fast, deterministic code model
         elif role in ("coder", "repair"):
             _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-7B-Instruct", max_tokens=600
+                "Qwen/Qwen2.5-7B-Instruct", max_tokens=6000
             )
 
         # Fallback

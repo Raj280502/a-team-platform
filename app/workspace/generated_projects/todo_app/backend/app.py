@@ -1,34 +1,35 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
-tasks = []
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    data = request.get_json() or {}
 
-@app.route('/tasks', methods=['GET'])
-def get_tasks():
-    return jsonify(tasks)
+    a = float(data.get('a', 0))
+    b = float(data.get('b', 0))
+    op = data.get('op')
 
-@app.route('/tasks', methods=['POST'])
-def add_task():
-    task = request.json
-    tasks.append(task)
-    return jsonify(task), 201
+    if op == 'add':
+        return jsonify(result=a+b)
+    if op == 'subtract':
+        return jsonify(result=a-b)
+    if op == 'multiply':
+        return jsonify(result=a*b)
+    if op == 'divide':
+        if b == 0:
+            return jsonify(error="Division by zero"), 400
+        return jsonify(result=a/b)
 
-@app.route('/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
-    task = next((t for t in tasks if t['id'] == task_id), None)
-    if not task:
-        return jsonify({"error": "Task not found"}), 404
-    task.update(request.json)
-    return jsonify(task)
+    return jsonify(error="Invalid operation"), 400
 
-@app.route('/tasks/<int:task_id>', methods=['DELETE'])
-def delete_task(task_id):
-    task = next((t for t in tasks if t['id'] == task_id), None)
-    if not task:
-        return jsonify({"error": "Task not found"}), 404
-    tasks.remove(task)
-    return '', 204
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify(status="ok")
+
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

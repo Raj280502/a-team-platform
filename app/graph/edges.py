@@ -1,20 +1,19 @@
-def should_repair(state) -> str:
+def should_repair(state):
     """
-    Decide whether to attempt repair or stop.
+    Central nervous reflex of the factory.
+    Decides: heal, deploy, or halt.
     """
 
-    # Stop if tests passed
-    if state["tests_passed"]:
+    # Hard safety governor — prevents infinite mutation
+    if state.get("repair_attempts", 0) >= 3:
+        print("⚠️ MAX REPAIR ATTEMPTS REACHED — HALTING PROJECT")
         return "end"
 
-    # Stop after 1 repair attempt (MVP rule)
-    if state["repair_attempts"] >= 1:
-        return "end"
-
-    return "repair"
-
-def should_continue(state):
-    if not state["tests_passed"]:
+    # Check if tests passed
+    if not state.get("tests_passed", False):
+        print(f"[DEBUG] Tests failed, attempting repair (attempt {state.get('repair_attempts', 0) + 1}/3)")
         return "repair"
 
+    # Tests passed - proceed to docker
+    print("[DEBUG] Tests passed, proceeding to deployment")
     return "docker"

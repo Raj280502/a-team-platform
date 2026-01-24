@@ -6,13 +6,15 @@ def main():
 
     final_state = graph.invoke(
         {
-            "user_prompt": "Build a simple React todo app using Flask",
+            "user_prompt": "Build a simple calculator app with  React.",
             "project_scope": None,
             "architecture": None,
+            "contract": None,
             "files": {},
             "tests_passed": None,
             "error_message": None,
             "repair_attempts": 0,
+            "project_dir": "app/workspace/generated_projects/todo_app",
         }
     )
 
