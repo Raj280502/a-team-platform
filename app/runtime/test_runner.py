@@ -15,42 +15,33 @@ from pathlib import Path
 _flask_process = None
 
 def start_backend_server(project_dir: Path) -> tuple[bool, str | None]:
-    """
-    Starts the Flask backend server in background.
-    
-    Returns:
-        (success, error_message)
-    """
     global _flask_process
-    
+
+    # 🔥 ALWAYS stop old server first
+    stop_backend_server()
+
     backend_dir = project_dir / "backend"
-    
-    if not backend_dir.exists():
-        return False, "Backend directory not found"
-    
+
     try:
-        # Start Flask server in background
         _flask_process = subprocess.Popen(
             [sys.executable, "app.py"],
             cwd=backend_dir,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
-        
-        # Wait a moment for server to start
+
         time.sleep(2)
-        
-        # Check if process is still running
+
         if _flask_process.poll() is not None:
-            # Process died
             stdout, stderr = _flask_process.communicate()
             error = stderr.decode() if stderr else stdout.decode()
             return False, f"Backend failed to start: {error}"
-        
+
         return True, None
-    
+
     except Exception as e:
         return False, str(e)
+
 
 def stop_backend_server():
     """

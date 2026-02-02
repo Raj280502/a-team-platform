@@ -3,19 +3,20 @@ from app.core.state import ProjectState
 
 def coder_plan_node(state: ProjectState) -> ProjectState:
     """
-    Defines the MVP file plan AND initializes route container.
+    Prepares the coding phase.
+    
+    Uses the file_plan from architect (dynamic, not hardcoded).
+    Initializes containers for route extraction.
     """
-
+    
+    # Use file_plan from architect node (already dynamic)
+    file_plan = state.get("file_plan", [])
+    
+    print(f"📋 Coder planning {len(file_plan)} files to generate")
+    
     return {
-        "file_plan": [
-            "backend/app.py",
-            "frontend/package.json",
-            "frontend/index.html",
-            "frontend/vite.config.js",
-            "frontend/src/main.jsx",
-            "frontend/src/App.jsx",
-        ],
-
-        # 🔥 VERY IMPORTANT — initialize this for later nodes
-        "extracted_routes": []
+        "file_plan": file_plan,
+        # Initialize containers for extraction
+        "extracted_routes": [],
+        "request_fields": {}
     }

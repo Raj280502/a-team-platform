@@ -29,5 +29,22 @@ def get_hf_api_key() -> str:
         )
 
     return api_key
+
+
+def get_groq_api_key() -> str:
+    """
+    Returns the Groq API key from environment variables.
+    Used as fallback when HuggingFace tokens are exceeded.
+    """
+    api_key = os.getenv("GROQ_API_KEY")
+    
+    if not api_key:
+        return None
+    
+    return api_key
+
+
 get_hf_api_key()
 print("Configuration module loaded. HF_API_KEY is set.")
+if get_groq_api_key():
+    print("GROQ_API_KEY is also available as fallback.")

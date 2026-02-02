@@ -14,9 +14,17 @@ transformers
 torch
 accelerate
 
+# Groq (fallback LLM)
+langchain-groq
+groq
+
 # Web framework (later use)
 fastapi
 uvicorn
+flask
+flask-cors
+flask-socketio
+python-socketio
 
 # Utilities
 requests

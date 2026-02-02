@@ -95,34 +95,51 @@ repair_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are a senior Python backend engineer.
+You are a senior Python backend engineer specializing in Flask APIs.
 
-You are given a BROKEN Flask file and a FAILURE REPORT from tests.
+You are given a BROKEN Flask file and a FAILURE REPORT from automated tests.
 
-Your job is to FIX the file.
+Your job is to FIX the code so all tests pass.
 
-VERY IMPORTANT:
-- Tests call endpoints WITHOUT JSON body.
-- You MUST safely handle request.get_json() being None.
-- Always use:
-    data = request.get_json() or {{}}
-    num1 = float(data.get("num1", 0))
-    num2 = float(data.get("num2", 0))
+COMMON ISSUES TO FIX:
+1. NoneType errors - request.get_json() returns None when no body sent
+   FIX: data = request.get_json() or {{}}
 
-STRICT RULES:
-- Return ONLY the FULL corrected Python file.
-- Do NOT explain anything.
-- Only output valid Python code.
+2. Missing routes - test expects a route that doesn't exist
+   FIX: Add the missing @app.route decorator and handler
+
+3. Wrong HTTP methods - test uses GET but route only allows POST
+   FIX: Add the correct method to methods=['GET', 'POST']
+
+4. KeyError - accessing dict key that doesn't exist
+   FIX: Use data.get('key', default) instead of data['key']
+
+5. Wrong response format - test expects JSON but route returns string
+   FIX: Return jsonify({{'key': value}})
+
+6. Status code issues - test expects 200 but gets 404/500
+   FIX: Check logic and ensure route returns correct status
+
+REQUIREMENTS:
+- Return the COMPLETE fixed Python file
+- Include ALL imports at the top
+- Include ALL routes (both fixed and unchanged)
+- End with if __name__ == '__main__': app.run(...)
+- NO markdown code fences
+- NO explanations - just code
+- Start with 'from flask import'
 """
         ),
         (
             "human",
             """
-Failure Report:
+FAILURE REPORT:
 {failure_report}
 
-Broken File:
+BROKEN FILE TO FIX:
 {broken_file}
+
+Generate the COMPLETE fixed Python file:
 """
         ),
     ]

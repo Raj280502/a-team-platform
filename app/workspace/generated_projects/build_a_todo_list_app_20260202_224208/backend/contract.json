@@ -1,0 +1,53 @@
+{
+  "base_url": "http://localhost:5000",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/add",
+      "expect": 200,
+      "body": {
+        "due_date": "2024-01-01",
+        "reminder": "test",
+        "title": "Test Item",
+        "description": "Test content here",
+        "urgency": "test"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/items",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/complete/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "DELETE",
+      "path": "/delete/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/set_reminder/1",
+      "expect": 200,
+      "body": {}
+    }
+  ]
+}
