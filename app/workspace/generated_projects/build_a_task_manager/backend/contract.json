@@ -1,0 +1,79 @@
+{
+  "base_url": "http://localhost:5000",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks",
+      "expect": 200,
+      "body": {
+        "priority": "test",
+        "category": "test",
+        "due_date": "2024-01-01"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks",
+      "expect": 200,
+      "body": {
+        "priority": "test",
+        "category": "test",
+        "due_date": "2024-01-01"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tasks/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tasks/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/categories",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/priorities",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tasks/1/complete",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/search",
+      "expect": 200,
+      "body": {}
+    }
+  ]
+}

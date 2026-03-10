@@ -1,0 +1,146 @@
+.stage-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.stage-sidebar-header {
+  padding: 16px 20px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stage-list {
+  list-style: none;
+  padding: 8px 0;
+  margin: 0;
+  flex: 1;
+}
+
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.stage-item:hover {
+  background: var(--bg-hover);
+}
+
+.stage-item.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-left-color: #6366f1;
+}
+
+.stage-item.active .stage-label {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.stage-item.completed .stage-label {
+  color: var(--text-primary);
+}
+
+.stage-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stage-item.disabled:hover {
+  background: transparent;
+}
+
+.stage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.stage-item.active .stage-icon {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+.stage-item.completed .stage-icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.stage-item.running .stage-icon {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  animation: pulse 1.5s infinite;
+}
+
+.stage-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage-check {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stage-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 8px 20px;
+}
+
+.stage-divider-label {
+  padding: 8px 20px 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

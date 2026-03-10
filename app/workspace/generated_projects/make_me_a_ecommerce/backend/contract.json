@@ -1,0 +1,104 @@
+{
+  "base_url": "http://localhost:5000",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/products",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/products/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/products",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/cart",
+      "expect": 200,
+      "body": {
+        "product_id": 1,
+        "quantity": 5
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cart/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/cart/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders",
+      "expect": 200,
+      "body": {
+        "cart_id": 1,
+        "payment_method": "test",
+        "shipping_address": "test"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "expect": 200,
+      "body": {
+        "username": "Test Item",
+        "email": "test@example.com",
+        "password": "testpass123"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/reviews",
+      "expect": 200,
+      "body": {
+        "product_id": 1,
+        "text": "Test content here",
+        "rating": "test"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/reviews/1",
+      "expect": 200,
+      "body": {}
+    }
+  ]
+}

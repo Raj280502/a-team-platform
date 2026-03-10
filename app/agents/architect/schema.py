@@ -1,27 +1,35 @@
 """
-schema.py
----------
-Defines the structured output for the Architect agent.
+schema.py - Architect agent output schema.
+Supports multiple tech stacks and component hierarchy.
 """
 
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
-class Service(BaseModel):
-    """Represents one runnable service in the system."""
-    name: str = Field(..., description="Unique service name (e.g., 'auth-service')")
-    framework: str = Field(..., description="Framework/technology stack")
-    port: int = Field(..., ge=1024, le=65535, description="Exposed port number")
+class ComponentSpec(BaseModel):
+    """A UI component specification."""
+    name: str = Field(..., description="Component name (e.g., 'TaskList', 'AddForm')")
+    file_path: str = Field(..., description="Relative file path (e.g., 'frontend/src/components/TaskList.jsx')")
+    description: str = Field(..., description="What this component does")
+
+
+class APIRoute(BaseModel):
+    """An API route specification."""
+    method: str = Field(..., description="HTTP method (GET, POST, PUT, DELETE)")
+    path: str = Field(..., description="Route path (e.g., '/api/tasks')")
+    description: str = Field(..., description="What this endpoint does")
+    request_body: Optional[List[str]] = Field(default=None, description="Expected request body fields")
+    response_type: str = Field(default="json", description="Response type (json, text, file)")
 
 
 class ArchitectOutput(BaseModel):
-    """
-    Structured system architecture produced by the Architect.
-    """
+    """Structured system architecture produced by the Architect."""
 
-    backend: str = Field(..., description="Backend technology stack (e.g., 'FastAPI + PostgreSQL')")
-    frontend: str = Field(..., description="Frontend technology stack (e.g., 'Next.js + Tailwind')")
-    services: List[Service] = Field(..., min_items=1, max_items=10, description="Microservices breakdown")
-    use_docker: bool = Field(..., description="Use Docker Compose for deployment?")
-    
+    backend: str = Field(..., description="Backend framework (e.g., 'Flask', 'Express')")
+    frontend: str = Field(..., description="Frontend framework (e.g., 'React', 'Vue')")
+    backend_file: str = Field(default="backend/app.py", description="Main backend file path")
+    api_routes: List[APIRoute] = Field(default_factory=list, description="All API routes")
+    components: List[ComponentSpec] = Field(default_factory=list, description="Frontend components")
+    styling: str = Field(default="inline CSS", description="Styling approach")
+    state_management: str = Field(default="useState", description="State management approach")

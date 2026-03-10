@@ -1,128 +1,74 @@
 """
 llm.py
 ------
-This file defines a SINGLE place where the LLM is initialized.
-
-Why this file is critical:
-- Prevents reloading the model multiple times
-- Keeps configuration consistent
-- Makes the system scalable and maintainable
+Centralized LLM initialization with Groq as the primary provider.
+Supports streaming and role-based token limits.
 """
 
-# from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-# from .config import get_hf_api_key
-
-# # Internal singleton instance
-# _llm_instance = None
-
-
-# def get_llm():
-#     """
-#     Returns a shared LLM instance.
-
-#     Design pattern used:
-#     - Singleton (one LLM for the entire application)
-
-#     Why:
-#     - Efficient
-#     - Easy to swap models
-#     - Avoids repeated authentication
-#     """
-#     global _llm_instance
-
-#     if _llm_instance is None:
-#         api_key = get_hf_api_key()
-
-#         # Hugging Face inference client
-#         endpoint = HuggingFaceEndpoint(
-#             repo_id="Qwen/Qwen2.5-72B-Instruct",
-#             task="text-generation",
-#             huggingfacehub_api_token=api_key,
-#         )
-
-#         _llm_instance = ChatHuggingFace(llm=endpoint, temperature=0, max_new_tokens=5000, do_sample=False, top_p=0.95)
-       
-#     return _llm_instance
-# print("LLM module loaded. Use get_llm() to access the model.")
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langchain_groq import ChatGroq
-from .config import get_hf_api_key, get_groq_api_key
+from langchain_core.callbacks import BaseCallbackHandler
+from .config import get_groq_api_key, GROQ_MODEL, TOKEN_LIMITS
 
 # Cache per role
 _LLM_POOL = {}
-_USE_GROQ = False  # Switch to True if HuggingFace fails
 
-def _build_hf_llm(repo_id: str, max_tokens: int):
-    """Build HuggingFace LLM."""
-    return ChatHuggingFace(
-        llm=HuggingFaceEndpoint(
-            repo_id=repo_id,
-            task="text-generation",
-            huggingfacehub_api_token=get_hf_api_key(),
-        ),
-        temperature=0,
-        do_sample=False,
-        max_new_tokens=max_tokens,
-    )
+# Global streaming callback (set by web_ui for real-time streaming)
+_streaming_callback = None
 
-def _build_groq_llm(max_tokens: int):
-    """Build Groq LLM as fallback."""
+
+def set_streaming_callback(callback: BaseCallbackHandler):
+    """Set a global streaming callback for all LLM calls."""
+    global _streaming_callback
+    _streaming_callback = callback
+
+
+def _build_groq_llm(max_tokens: int, streaming: bool = False):
+    """Build Groq LLM instance."""
     groq_key = get_groq_api_key()
     if not groq_key:
-        raise ValueError("GROQ_API_KEY not set in .env file")
-    
+        raise ValueError(
+            "GROQ_API_KEY not set in .env file. "
+            "Get one at https://console.groq.com/keys"
+        )
+
+    callbacks = []
+    if streaming and _streaming_callback:
+        callbacks.append(_streaming_callback)
+
     return ChatGroq(
         api_key=groq_key,
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         temperature=0,
         max_tokens=max_tokens,
+        streaming=streaming,
+        callbacks=callbacks if callbacks else None,
     )
 
-def _build_llm(repo_id: str, max_tokens: int):
-    """Build LLM with automatic fallback to Groq."""
-    global _USE_GROQ
-    
-    # If already switched to Groq, use it
-    if _USE_GROQ:
-        print("⚡ Using Groq API (HuggingFace fallback)")
-        return _build_groq_llm(max_tokens)
-    
-    # Try HuggingFace first
-    try:
-        return _build_hf_llm(repo_id, max_tokens)
-    except Exception as e:
-        error_str = str(e).lower()
-        # Check if it's a rate limit or token error
-        if "rate" in error_str or "limit" in error_str or "quota" in error_str or "token" in error_str:
-            print(f"⚠️ HuggingFace token limit reached: {e}")
-            print("🔄 Switching to Groq API...")
-            _USE_GROQ = True
-            return _build_groq_llm(max_tokens)
-        else:
-            # Re-raise if it's not a token issue
-            raise
 
-def get_llm(role: str = "default"):
-    if role not in _LLM_POOL:
+def get_llm(role: str = "default", streaming: bool = False):
+    """
+    Returns an LLM instance for the given role.
 
-        # Heavy reasoning model - needs high tokens for complex planning
-        if role in ("strategist", "architect"):
-            _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-72B-Instruct", max_tokens=4000
-            )
+    Args:
+        role: One of 'strategist', 'architect', 'coder', 'repair', 'chat', 'default'
+        streaming: Whether to enable streaming mode
 
-        # Fast, deterministic code model - needs very high tokens for full files
-        elif role in ("coder", "repair"):
-            _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-72B-Instruct", max_tokens=8000
-            )
+    Returns:
+        ChatGroq instance with role-appropriate token limits
+    """
+    cache_key = f"{role}_{'stream' if streaming else 'sync'}"
 
-        # Fallback
-        else:
-            _LLM_POOL[role] = _build_llm(
-                "Qwen/Qwen2.5-7B-Instruct", max_tokens=4000
-            )
+    if cache_key not in _LLM_POOL:
+        max_tokens = TOKEN_LIMITS.get(role, TOKEN_LIMITS["default"])
+        _LLM_POOL[cache_key] = _build_groq_llm(max_tokens, streaming=streaming)
 
-    return _LLM_POOL[role]
+    return _LLM_POOL[cache_key]
 
-print("Multi-role LLM loader ready.")
+
+def clear_llm_pool():
+    """Clear cached LLM instances (useful for config changes)."""
+    global _LLM_POOL
+    _LLM_POOL = {}
+
+
+print("⚡ LLM module ready (Groq provider).")

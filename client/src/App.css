@@ -1,0 +1,15 @@
+/* ═══════════════════════════════════════════════════════ */
+/* APP LAYOUT                                              */
+/* ═══════════════════════════════════════════════════════ */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-primary);
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}

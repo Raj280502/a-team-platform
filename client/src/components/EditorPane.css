@@ -1,0 +1,90 @@
+/* ═══════════════════════════════════════════════════════ */
+/* EDITOR PANE                                             */
+/* ═══════════════════════════════════════════════════════ */
+.editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.editor-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-muted);
+}
+
+.empty-icon {
+    color: var(--border-hover);
+}
+
+.editor-empty-state p {
+    font-size: 0.88rem;
+}
+
+/* Tab bar */
+.editor-tab-bar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 100%;
+    font-size: 0.76rem;
+    font-family: var(--font-sans);
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.editor-tab:hover {
+    color: var(--text-primary);
+}
+
+.editor-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+    background: var(--bg-secondary);
+}
+
+.tab-close {
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    padding: 2px;
+    border-radius: 3px;
+    transition: all var(--transition);
+}
+
+.editor-tab:hover .tab-close {
+    opacity: 0.5;
+}
+
+.tab-close:hover {
+    opacity: 1 !important;
+    background: var(--bg-hover);
+}
+
+/* Editor wrapper */
+.editor-wrapper {
+    flex: 1;
+    overflow: hidden;
+}

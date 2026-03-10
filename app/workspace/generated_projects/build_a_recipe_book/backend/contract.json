@@ -1,0 +1,71 @@
+{
+  "base_url": "http://localhost:5000",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/recipes",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/recipes",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/recipes/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/api/recipes/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/recipes/1",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/recipes/search",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/recipes/favorites",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/recipes/1/favorite",
+      "expect": 200,
+      "body": {}
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/recipes/1/favorite",
+      "expect": 200,
+      "body": {}
+    }
+  ]
+}

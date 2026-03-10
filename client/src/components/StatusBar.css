@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════ */
+/* STATUS BAR                                              */
+/* ═══════════════════════════════════════════════════════ */
+.status-bar {
+    height: var(--status-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.status-left,
+.status-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: all 0.3s;
+}
+
+.status-dot.active {
+    background: var(--success);
+    box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+}
+
+.status-dot.generating {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+    animation: pulse 1s infinite;
+}
+
+.status-dot.error {
+    background: var(--error);
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.3);
+}
+
+.status-label {
+    color: var(--text-muted);
+}
+
+.status-value {
+    color: var(--text-secondary);
+}
+
+.status-brand {
+    color: var(--accent-light);
+    font-weight: 500;
+}

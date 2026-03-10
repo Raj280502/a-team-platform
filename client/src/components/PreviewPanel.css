@@ -1,0 +1,220 @@
+/* ═══════════════════════════════════════════════════════ */
+/* PREVIEW PANEL                                           */
+/* ═══════════════════════════════════════════════════════ */
+.preview-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.preview-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.preview-url-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: var(--bg-tertiary);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+.url-lock {
+    color: var(--success);
+    flex-shrink: 0;
+}
+
+.url-text {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 3px;
+}
+
+.preview-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.preview-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.preview-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Body */
+.preview-body {
+    flex: 1;
+    position: relative;
+    background: white;
+    overflow: hidden;
+}
+
+.preview-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    transition: opacity 0.3s ease;
+}
+
+.preview-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    gap: 8px;
+}
+
+.preview-placeholder.error {
+    color: var(--error, #ef4444);
+}
+
+.placeholder-icon {
+    color: var(--border-hover);
+}
+
+.preview-placeholder p {
+    font-size: 0.88rem;
+}
+
+.placeholder-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    max-width: 280px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Spinning animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+/* Loading overlay (on top of iframe) */
+.preview-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    gap: 10px;
+    z-index: 5;
+    font-size: 0.82rem;
+}
+
+/* Error overlay (on top of iframe) */
+.preview-error-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    gap: 8px;
+    z-index: 5;
+}
+
+.preview-error-overlay p {
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.error-icon {
+    color: var(--warning, #f59e0b);
+}
+
+.error-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    max-width: 280px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.error-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* Retry / Start button */
+.retry-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.retry-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.retry-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.retry-btn.primary:hover {
+    background: var(--accent-hover, #6d28d9);
+}

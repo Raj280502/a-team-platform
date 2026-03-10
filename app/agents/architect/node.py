@@ -1,7 +1,5 @@
 """
-node.py
--------
-Defines the Architect agent as a Runnable.
+node.py - Architect agent runnable.
 """
 
 from langchain_core.runnables import RunnableSequence
@@ -13,28 +11,13 @@ from app.agents.architect.schema import ArchitectOutput
 
 
 def build_architect_node() -> RunnableSequence:
-    """
-    Builds and returns the Architect agent runnable.
+    """Builds the Architect agent chain."""
+    llm = get_llm(role="architect")
 
-    Returns:
-        RunnableSequence: Converts project scope
-                          into system architecture.
-    """
-
-    llm = get_llm()
-
-    output_parser = PydanticOutputParser(
-        pydantic_object=ArchitectOutput
-    )
+    output_parser = PydanticOutputParser(pydantic_object=ArchitectOutput)
 
     prompt_with_formatting = architect_prompt.partial(
         format_instructions=output_parser.get_format_instructions()
     )
 
-    architect_chain = (
-        prompt_with_formatting
-        | llm
-        | output_parser
-    )
-
-    return architect_chain
+    return prompt_with_formatting | llm | output_parser

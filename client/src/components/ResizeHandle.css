@@ -1,0 +1,16 @@
+/* ═══════════════════════════════════════════════════════ */
+/* RESIZE HANDLE                                           */
+/* ═══════════════════════════════════════════════════════ */
+.resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: var(--border-color);
+    transition: background var(--transition);
+    flex-shrink: 0;
+    z-index: 5;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+    background: var(--accent);
+}

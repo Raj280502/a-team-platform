@@ -13,6 +13,7 @@ huggingface-hub
 transformers
 torch
 accelerate
+langchain-huggingface
 
 # Groq (fallback LLM)
 langchain-groq
