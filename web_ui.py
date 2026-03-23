@@ -391,126 +391,6 @@ def api_stream():
 
 
 # ============================================
-# SDLC STAGE API (stage-gated execution)
-# ============================================
-
-@app.route("/api/stages", methods=["GET"])
-def api_stages():
-    """Return data for all completed SDLC stages."""
-    from app.graph.graph import SDLC_STAGES, STAGE_LABELS
-
-    stages = []
-    for name in SDLC_STAGES:
-        data = _current_state.get(name if name != "user_research" else "user_research",
-                                   _current_state.get(name, None))
-        # Map stage names to their state keys
-        state_key = {
-            "overview": "project_overview",
-            "requirements": "requirements",
-            "user_research": "user_research",
-            "task_flows": "task_flows",
-            "user_stories": "user_stories",
-        }.get(name, name)
-
-        stage_data = _current_state.get(state_key)
-
-        stages.append({
-            "name": name,
-            "label": STAGE_LABELS.get(name, name),
-            "completed": stage_data is not None,
-            "data": stage_data,
-        })
-
-    return jsonify({
-        "stages": stages,
-        "current_step": _current_state.get("current_step", "idle"),
-        "active": _generation_active,
-    })
-
-
-@app.route("/api/stages/<stage_name>", methods=["GET"])
-def api_stage_detail(stage_name):
-    """Return data for a specific SDLC stage."""
-    state_key = {
-        "overview": "project_overview",
-        "requirements": "requirements",
-        "user_research": "user_research",
-        "task_flows": "task_flows",
-        "user_stories": "user_stories",
-    }.get(stage_name)
-
-    if not state_key:
-        return jsonify({"error": f"Unknown stage: {stage_name}"}), 404
-
-    data = _current_state.get(state_key)
-    return jsonify({
-        "name": stage_name,
-        "completed": data is not None,
-        "data": data,
-    })
-
-
-@app.route("/api/stages/run/<stage_name>", methods=["POST"])
-def api_run_stage(stage_name):
-    """Run a single SDLC stage (stage-gated execution)."""
-    global _generation_active
-
-    from app.graph.graph import SDLC_STAGES
-
-    if stage_name not in SDLC_STAGES:
-        return jsonify({"error": f"Unknown stage: {stage_name}"}), 404
-
-    if _generation_active:
-        return jsonify({"error": "A stage is already running"}), 409
-
-    # Get the user prompt — either from current state or from request body
-    body = request.get_json() or {}
-    prompt = body.get("prompt", "") or _current_state.get("user_prompt", "")
-
-    if not prompt:
-        return jsonify({"error": "No prompt available. Send prompt in request body."}), 400
-
-    # Store the prompt in state
-    _current_state["user_prompt"] = prompt
-
-    thread = threading.Thread(
-        target=_run_stage,
-        args=(stage_name,),
-        daemon=True,
-    )
-    thread.start()
-
-    return jsonify({
-        "status": "started",
-        "stage": stage_name,
-    })
-
-
-@app.route("/api/stages/generate", methods=["POST"])
-def api_start_code_generation():
-    """Start code generation AFTER all SDLC stages have been approved."""
-    global _generation_active
-
-    if _generation_active:
-        return jsonify({"error": "Generation already in progress"}), 409
-
-    prompt = _current_state.get("user_prompt", "")
-    if not prompt:
-        return jsonify({"error": "No prompt set"}), 400
-
-    project_name = _current_state.get("project_name", "")
-
-    thread = threading.Thread(
-        target=_run_generation,
-        args=(prompt, project_name),
-        daemon=True,
-    )
-    thread.start()
-
-    return jsonify({"status": "started"})
-
-
-# ============================================
 # SOCKETIO EVENTS
 # ============================================
 
@@ -582,80 +462,7 @@ def _update_state(node_name: str, node_output: dict):
             if key in node_output:
                 _current_state[key] = node_output[key]
 
-        # Update SDLC stage data
-        for key in ("project_overview", "requirements", "user_research",
-                     "task_flows", "user_stories"):
-            if key in node_output:
-                _current_state[key] = node_output[key]
-
     add_log(f"[{node_name}] completed — files: {len(_current_state.get('files', {}))}")
-
-
-def _run_stage(stage_name: str):
-    """Run a single SDLC stage in background (stage-gated execution)."""
-    global _generation_active, _current_state
-
-    with _generation_lock:
-        _generation_active = True
-        _current_state["current_step"] = f"{stage_name}_running"
-
-    try:
-        from app.graph.graph import build_stage_graph
-
-        graph = build_stage_graph(stage_name)
-
-        # Build input state from current accumulated state
-        input_state = {
-            "user_prompt": _current_state.get("user_prompt", ""),
-            "project_name": _current_state.get("project_name", ""),
-            "project_dir": _current_state.get("project_dir", ""),
-            "tech_stack": _current_state.get("tech_stack", "react-flask"),
-            "chat_history": _current_state.get("chat_history", []),
-            "is_followup": False,
-            "files": _current_state.get("files", {}),
-            "file_plan": _current_state.get("file_plan", []),
-            "extracted_routes": _current_state.get("extracted_routes", []),
-            "request_fields": _current_state.get("request_fields", {}),
-            "generation_issues": [],
-            "files_to_regenerate": [],
-            "failed_file_history": [],
-            "tests_passed": False,
-            "error_message": None,
-            "contract_report": {},
-            "repair_attempts": 0,
-            "preview_started": False,
-            "preview_url": "",
-            "current_step": f"{stage_name}_running",
-        }
-
-        # Include previously completed SDLC stage data
-        for key in ("project_overview", "requirements", "user_research",
-                     "task_flows", "user_stories", "project_scope", "architecture"):
-            if key in _current_state and _current_state[key]:
-                input_state[key] = _current_state[key]
-
-        print(f"\n🎯 Running SDLC stage: {stage_name}")
-        result = graph.invoke(input_state)
-
-        # Merge result into current state
-        with _generation_lock:
-            for key, value in result.items():
-                if value is not None:
-                    _current_state[key] = value
-            _current_state["current_step"] = f"{stage_name}_complete"
-
-        print(f"   ✅ Stage '{stage_name}' completed successfully")
-
-    except Exception as e:
-        print(f"   ❌ Stage '{stage_name}' failed: {e}")
-        import traceback
-        traceback.print_exc()
-        with _generation_lock:
-            _current_state["current_step"] = "error"
-            _current_state["error_message"] = str(e)
-
-    finally:
-        _generation_active = False
 
 
 def _run_generation(prompt: str, project_name: str):
@@ -664,9 +471,7 @@ def _run_generation(prompt: str, project_name: str):
 
     with _generation_lock:
         _generation_active = True
-        if "files" not in _current_state:
-            _current_state["files"] = {}
-        _current_state["current_step"] = "starting"
+        _current_state = {"current_step": "starting", "files": {}}
 
     try:
         from app.main import run_pipeline_streaming

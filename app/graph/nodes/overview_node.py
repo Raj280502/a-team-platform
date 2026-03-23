@@ -37,7 +37,7 @@ def overview_node(state: ProjectState) -> ProjectState:
     """Stage 1: Generate project overview from user prompt."""
     print("\n📋 OVERVIEW: Generating project overview...")
 
-    llm = get_llm(role="strategist")
+    llm = get_llm(role="overview")
     parser = PydanticOutputParser(pydantic_object=ProjectOverviewOutput)
 
     chain = _prompt.partial(

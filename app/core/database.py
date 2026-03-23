@@ -64,10 +64,36 @@ def init_db():
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS sdlc_stages (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  TEXT NOT NULL,
+                stage_name  TEXT NOT NULL,
+                stage_data  TEXT NOT NULL DEFAULT '{}',
+                created_at  TEXT NOT NULL,
+                updated_at  TEXT NOT NULL,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                UNIQUE(project_id, stage_name)
+            );
+
+            CREATE TABLE IF NOT EXISTS project_versions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  TEXT NOT NULL,
+                version_num INTEGER NOT NULL DEFAULT 1,
+                label       TEXT DEFAULT '',
+                files_json  TEXT NOT NULL DEFAULT '{}',
+                file_count  INTEGER NOT NULL DEFAULT 0,
+                created_at  TEXT NOT NULL,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            );
+
             CREATE INDEX IF NOT EXISTS idx_messages_project
                 ON chat_messages(project_id);
             CREATE INDEX IF NOT EXISTS idx_files_project
                 ON generated_files(project_id);
+            CREATE INDEX IF NOT EXISTS idx_sdlc_project
+                ON sdlc_stages(project_id);
+            CREATE INDEX IF NOT EXISTS idx_versions_project
+                ON project_versions(project_id);
         """)
         conn.commit()
         print("✅ Database initialized:", DB_PATH)
@@ -175,8 +201,8 @@ def update_project(project_id: str, files: dict = None,
 
 def load_project(project_id: str) -> dict | None:
     """
-    Load a project with all its files and messages.
-    Returns: { project: {...}, files: {path: content}, messages: [...] }
+    Load a project with all its files, messages, and SDLC stages.
+    Returns: { project: {...}, files: {path: content}, messages: [...], sdlc_stages: {...} }
     """
     conn = _get_conn()
     try:
@@ -211,10 +237,23 @@ def load_project(project_id: str) -> dict | None:
             for r in msg_rows
         ]
 
+        # Load SDLC stages
+        sdlc_rows = conn.execute(
+            "SELECT stage_name, stage_data FROM sdlc_stages WHERE project_id = ?",
+            (project_id,)
+        ).fetchall()
+        sdlc_stages = {}
+        for r in sdlc_rows:
+            try:
+                sdlc_stages[r['stage_name']] = json.loads(r['stage_data'])
+            except json.JSONDecodeError:
+                sdlc_stages[r['stage_name']] = {}
+
         return {
             'project': project,
             'files': files,
             'messages': messages,
+            'sdlc_stages': sdlc_stages,
         }
     finally:
         conn.close()
@@ -284,3 +323,118 @@ def get_messages(project_id: str) -> list:
         ]
     finally:
         conn.close()
+
+
+# ============================================
+# SDLC STAGE PERSISTENCE
+# ============================================
+
+def save_sdlc_stage(project_id: str, stage_name: str, stage_data: dict):
+    """Save or update SDLC stage data for a project."""
+    now = datetime.utcnow().isoformat()
+    data_json = json.dumps(stage_data, default=str)
+    conn = _get_conn()
+    try:
+        conn.execute(
+            """INSERT INTO sdlc_stages (project_id, stage_name, stage_data, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(project_id, stage_name)
+               DO UPDATE SET stage_data = ?, updated_at = ?""",
+            (project_id, stage_name, data_json, now, now, data_json, now)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def load_sdlc_stages(project_id: str) -> dict:
+    """Load all SDLC stages for a project. Returns { stage_name: data_dict }."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT stage_name, stage_data FROM sdlc_stages WHERE project_id = ?",
+            (project_id,)
+        ).fetchall()
+        stages = {}
+        for r in rows:
+            try:
+                stages[r['stage_name']] = json.loads(r['stage_data'])
+            except json.JSONDecodeError:
+                stages[r['stage_name']] = {}
+        return stages
+    finally:
+        conn.close()
+
+
+# ============================================
+# PROJECT VERSION HISTORY
+# ============================================
+
+def save_version(project_id: str, files: dict, label: str = '') -> int:
+    """
+    Save a snapshot of the current files as a version.
+    Returns the version number.
+    """
+    now = datetime.utcnow().isoformat()
+    conn = _get_conn()
+    try:
+        # Get next version number
+        row = conn.execute(
+            "SELECT COALESCE(MAX(version_num), 0) + 1 AS next_ver FROM project_versions WHERE project_id = ?",
+            (project_id,)
+        ).fetchone()
+        ver = row['next_ver']
+
+        files_json = json.dumps(files, default=str)
+        conn.execute(
+            """INSERT INTO project_versions
+               (project_id, version_num, label, files_json, file_count, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (project_id, ver, label or f"Version {ver}", files_json, len(files), now)
+        )
+        conn.commit()
+        return ver
+    finally:
+        conn.close()
+
+
+def list_versions(project_id: str) -> list:
+    """List all versions for a project (metadata, no file contents)."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT id, version_num, label, file_count, created_at
+               FROM project_versions WHERE project_id = ?
+               ORDER BY version_num DESC""",
+            (project_id,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def restore_version(project_id: str, version_num: int) -> dict | None:
+    """
+    Restore files from a specific version.
+    Also saves current files as a new version before restoring.
+    Returns the restored files dict or None if not found.
+    """
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT files_json FROM project_versions WHERE project_id = ? AND version_num = ?",
+            (project_id, version_num)
+        ).fetchone()
+
+        if not row:
+            return None
+
+        restored_files = json.loads(row['files_json'])
+
+        # Update the project's current files
+        update_project(project_id, files=restored_files)
+
+        return restored_files
+    finally:
+        conn.close()
+

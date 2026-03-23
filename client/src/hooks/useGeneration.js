@@ -14,17 +14,6 @@ const STEP_LABELS = {
     error: '❌ Error occurred',
     chat_processing: '💬 Processing changes...',
     chat_complete: '✅ Changes applied!',
-    // SDLC stage steps
-    overview_running: '📋 Generating project overview...',
-    overview_complete: '📋 Project overview ready',
-    requirements_running: '📝 Generating requirements...',
-    requirements_complete: '📝 Requirements ready',
-    user_research_running: '👥 Analyzing users & personas...',
-    user_research_complete: '👥 User research ready',
-    task_flows_running: '🔄 Generating task flows...',
-    task_flows_complete: '🔄 Task flows ready',
-    user_stories_running: '📖 Generating user stories...',
-    user_stories_complete: '📖 User stories ready',
 }
 
 export function useGeneration() {
@@ -39,11 +28,6 @@ export function useGeneration() {
     const [isGenerating, setIsGenerating] = useState(false)
     const [testsStatus, setTestsStatus] = useState(null)
     const eventSourceRef = useRef(null)
-
-    // SDLC stage state
-    const [stageData, setStageData] = useState({})
-    const [runningStage, setRunningStage] = useState(null)
-    const [completedStages, setCompletedStages] = useState([])
 
     // Add a message to the chat
     const addMessage = useCallback((role, text, type = 'message') => {
@@ -295,77 +279,6 @@ export function useGeneration() {
         }
     }, [])
 
-    // Run a single SDLC stage (stage-gated execution)
-    const runStage = useCallback(async (stageName, prompt = '') => {
-        setRunningStage(stageName)
-        addStep(STEP_LABELS[`${stageName}_running`] || `Running ${stageName}...`)
-
-        try {
-            const body = prompt ? { prompt } : {}
-            const res = await fetch(`/api/stages/run/${stageName}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            })
-
-            if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error || 'Stage failed')
-            }
-
-            // Poll for stage completion
-            const stateKey = {
-                overview: 'project_overview',
-                requirements: 'requirements',
-                user_research: 'user_research',
-                task_flows: 'task_flows',
-                user_stories: 'user_stories',
-            }[stageName] || stageName
-
-            const pollInterval = setInterval(async () => {
-                try {
-                    const stageRes = await fetch(`/api/stages/${stageName}`)
-                    const stageJson = await stageRes.json()
-
-                    if (stageJson.completed && stageJson.data) {
-                        clearInterval(pollInterval)
-                        setStageData(prev => ({ ...prev, [stateKey]: stageJson.data }))
-                        setCompletedStages(prev =>
-                            prev.includes(stageName) ? prev : [...prev, stageName]
-                        )
-                        setRunningStage(null)
-                        addStep(STEP_LABELS[`${stageName}_complete`] || `${stageName} complete`, true)
-                    }
-
-                    // Check for errors
-                    const stagesRes = await fetch('/api/stages')
-                    const stagesJson = await stagesRes.json()
-                    if (stagesJson.current_step === 'error') {
-                        clearInterval(pollInterval)
-                        setRunningStage(null)
-                        addStep(`❌ ${stageName} failed`, true)
-                    }
-                } catch (e) {
-                    console.error('Stage poll error:', e)
-                }
-            }, 1500)
-
-            // Safety timeout after 2 minutes
-            setTimeout(() => {
-                clearInterval(pollInterval)
-                if (runningStage === stageName) {
-                    setRunningStage(null)
-                    addStep(`⚠️ ${stageName} timed out`, true)
-                }
-            }, 120000)
-
-        } catch (err) {
-            setRunningStage(null)
-            addStep(`❌ Stage error: ${err.message}`, true)
-            console.error('runStage error:', err)
-        }
-    }, [addStep, runningStage])
-
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -389,11 +302,6 @@ export function useGeneration() {
         testsStatus,
         loadFiles,
         loadProject,
-        // SDLC stage state
-        stageData,
-        runStage,
-        runningStage,
-        completedStages,
     }
 }
 

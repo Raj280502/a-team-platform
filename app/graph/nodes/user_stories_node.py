@@ -63,7 +63,7 @@ def user_stories_node(state: ProjectState) -> ProjectState:
     """Stage 5: Generate user stories organized by epics and sprints."""
     print("\n📖 USER STORIES: Generating epics & sprints...")
 
-    llm = get_llm(role="strategist")
+    llm = get_llm(role="user_stories")
     parser = PydanticOutputParser(pydantic_object=UserStoriesOutput)
 
     research = state.get("user_research", {})

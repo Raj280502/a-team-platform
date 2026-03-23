@@ -61,7 +61,7 @@ def task_flows_node(state: ProjectState) -> ProjectState:
     """Stage 4: Generate task flows with diagram structure."""
     print("\n🔄 TASK FLOWS: Generating user journeys...")
 
-    llm = get_llm(role="strategist")
+    llm = get_llm(role="task_flows")
     parser = PydanticOutputParser(pydantic_object=TaskFlowsOutput)
 
     # Extract roles from user_research

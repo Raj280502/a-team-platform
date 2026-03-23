@@ -54,7 +54,7 @@ def user_research_node(state: ProjectState) -> ProjectState:
     """Stage 3: Generate user research (roles + personas)."""
     print("\n👥 USER RESEARCH: Generating roles & personas...")
 
-    llm = get_llm(role="strategist")
+    llm = get_llm(role="user_research")
     parser = PydanticOutputParser(pydantic_object=UserResearchOutput)
 
     chain = _prompt.partial(

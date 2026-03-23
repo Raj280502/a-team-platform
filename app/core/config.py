@@ -8,8 +8,8 @@ Loads environment variables and provides typed access.
 from dotenv import load_dotenv
 import os
 
-# Load variables from .env file
-load_dotenv()
+# Load variables from .env file (override=True ensures updated values are picked up)
+load_dotenv(override=True)
 
 
 def get_hf_api_key() -> str:
@@ -25,11 +25,21 @@ def get_groq_api_key() -> str:
     return os.getenv("GROQ_API_KEY")
 
 
+def get_google_api_key() -> str:
+    """Returns the Google Gemini API key from environment variables."""
+    return os.getenv("GOOGLE_API_KEY", "")
+
+
 # ---------- Platform Configuration ----------
 
 # LLM settings
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # groq | huggingface
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # groq | gemini
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# SDLC stages use a separate (cheaper/faster) LLM to avoid rate limits
+SDLC_LLM_PROVIDER = os.getenv("SDLC_LLM_PROVIDER", "groq")  # "gemini" or "groq"
+SDLC_GROQ_MODEL = os.getenv("SDLC_GROQ_MODEL", "llama-3.1-8b-instant")  # Smaller, 10x higher rate limit
+SDLC_GEMINI_MODEL = os.getenv("SDLC_GEMINI_MODEL", "gemini-2.5-flash")
 
 # Token limits per role
 TOKEN_LIMITS = {
@@ -38,6 +48,7 @@ TOKEN_LIMITS = {
     "coder": 16000,   # High limit for complete file generation
     "repair": 16000,
     "chat": 8000,     # For iterative refinement
+    "sdlc": 4000,     # SDLC planning stages
     "default": 4000,
 }
 
@@ -59,3 +70,10 @@ if get_groq_api_key():
     print(f"   LLM Provider: {LLM_PROVIDER} ({GROQ_MODEL})")
 else:
     print("   ⚠️ GROQ_API_KEY not set — LLM calls will fail")
+
+if SDLC_LLM_PROVIDER == "gemini" and get_google_api_key():
+    print(f"   SDLC Provider: Gemini ({SDLC_GEMINI_MODEL})")
+elif SDLC_LLM_PROVIDER == "groq":
+    print(f"   SDLC Provider: Groq ({SDLC_GROQ_MODEL}) — smaller model for rate limits")
+else:
+    print(f"   SDLC Provider: {SDLC_LLM_PROVIDER} (using default Groq)")

@@ -47,7 +47,7 @@ def requirements_node(state: ProjectState) -> ProjectState:
     """Stage 2: Generate requirements from project overview."""
     print("\n📝 REQUIREMENTS: Generating project requirements...")
 
-    llm = get_llm(role="strategist")
+    llm = get_llm(role="requirements")
     parser = PydanticOutputParser(pydantic_object=RequirementsOutput)
 
     overview_str = json.dumps(state.get("project_overview", {}), indent=2)
