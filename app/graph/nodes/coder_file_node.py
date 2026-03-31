@@ -776,7 +776,7 @@ input, textarea, select {
 
 
 def generate_package_json(project_goal: str) -> str:
-    """Generate package.json."""
+    """Generate package.json with all commonly used React dependencies pre-included."""
     name = re.sub(r"[^a-z0-9-]", "-", project_goal.lower()[:30]).strip("-") or "app"
     return f'''{{
   "name": "{name}",
@@ -791,7 +791,11 @@ def generate_package_json(project_goal: str) -> str:
   "dependencies": {{
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "axios": "^1.6.0"
+    "react-router-dom": "^6.20.0",
+    "axios": "^1.6.0",
+    "lucide-react": "^0.344.0",
+    "recharts": "^2.10.0",
+    "date-fns": "^3.0.0"
   }},
   "devDependencies": {{
     "vite": "^5.0.0",

@@ -567,8 +567,78 @@ def install_backend_deps(backend_dir: Path):
         print(f"   ⚠️ Backend deps install warning: {e}")
 
 
+def _patch_package_json_deps(frontend_dir: Path) -> bool:
+    """
+    Scan src/ for imported npm packages and ensure they are in package.json.
+    Adds any missing packages and deletes node_modules to force reinstall.
+    Returns True if package.json was modified.
+    """
+    import json as _json
+
+    package_json_path = frontend_dir / "package.json"
+    src_dir = frontend_dir / "src"
+    if not package_json_path.exists() or not src_dir.exists():
+        return False
+
+    # These are the standard packages the LLM commonly generates imports for
+    REQUIRED_DEPS = {
+        "react-router-dom": "^6.20.0",
+        "axios": "^1.6.0",
+        "lucide-react": "^0.344.0",
+        "recharts": "^2.10.0",
+        "date-fns": "^3.0.0",
+    }
+
+    # Scan all JSX/JS files for imported package names
+    imported_packages = set()
+    for ext in ("*.jsx", "*.js", "*.ts", "*.tsx"):
+        for f in src_dir.rglob(ext):
+            try:
+                content = f.read_text(encoding="utf-8", errors="ignore")
+                # Match: import X from 'package' or import { X } from 'package'
+                for m in re.finditer(r"from ['\"]([^./][^'\"]*)['\"]", content):
+                    # Get the base package name (e.g. 'react-router-dom/native' → 'react-router-dom')
+                    parts = m.group(1).split("/")
+                    pkg = parts[0] if not parts[0].startswith("@") else "/".join(parts[:2])
+                    imported_packages.add(pkg)
+            except Exception:
+                pass
+
+    try:
+        pkg_data = _json.loads(package_json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+
+    current_deps = pkg_data.get("dependencies", {})
+    added = {}
+
+    for pkg, ver in REQUIRED_DEPS.items():
+        if pkg in imported_packages and pkg not in current_deps:
+            current_deps[pkg] = ver
+            added[pkg] = ver
+
+    if not added:
+        return False
+
+    pkg_data["dependencies"] = current_deps
+    package_json_path.write_text(_json.dumps(pkg_data, indent=2), encoding="utf-8")
+    print(f"   🔧 Added missing npm packages to package.json: {', '.join(added.keys())}")
+
+    # Force reinstall by removing node_modules
+    node_modules = frontend_dir / "node_modules"
+    if node_modules.exists():
+        import shutil as _shutil
+        try:
+            _shutil.rmtree(node_modules)
+            print("   🔧 Removed node_modules to force clean reinstall")
+        except Exception as e:
+            print(f"   ⚠️ Could not remove node_modules: {e}")
+
+    return True
+
+
 def install_frontend_deps(frontend_dir: Path) -> bool:
-    """Install npm dependencies."""
+    """Install npm dependencies, auto-fixing missing packages first."""
     global _last_preview_error
     package_json = frontend_dir / "package.json"
     if not package_json.exists():
@@ -581,7 +651,10 @@ def install_frontend_deps(frontend_dir: Path) -> bool:
         print(f"   ⚠️ {_last_preview_error}")
         return False
 
-    # Check if node_modules already exists (skip reinstall)
+    # Auto-patch missing npm packages before installing
+    _patch_package_json_deps(frontend_dir)
+
+    # Check if node_modules already exists (skip reinstall only if package.json was NOT just patched)
     node_modules = frontend_dir / "node_modules"
     if node_modules.exists() and (node_modules / ".package-lock.json").exists():
         print("   ✅ Frontend deps already installed (skipping npm install)")
@@ -612,6 +685,7 @@ def install_frontend_deps(frontend_dir: Path) -> bool:
         _last_preview_error = f"npm install error: {e}"
         print(f"   ⚠️ {_last_preview_error}")
         return False
+
 
 
 def start_backend(backend_dir: Path) -> bool:

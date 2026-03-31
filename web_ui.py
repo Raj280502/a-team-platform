@@ -262,7 +262,12 @@ def api_project_detail(project_id):
     files = data['files']
     messages = data['messages']
 
-    # Restore into working state so user can continue iterating
+    # Load SDLC stages saved in the DB for this project (may be empty dict)
+    from app.core.database import load_sdlc_stages as _load_sdlc_stages
+    sdlc_db = _load_sdlc_stages(project_id) or {}
+
+    # Restore into working state — always replace ALL keys to prevent
+    # stale SDLC data from a previous project leaking into this one.
     with _generation_lock:
         _current_state = {
             "project_name": project['name'],
@@ -271,8 +276,15 @@ def api_project_detail(project_id):
             "current_step": "complete",
             "tests_passed": False,
             "preview_url": "",
+            # SDLC stage data — restored if saved, explicitly None if not
+            "project_overview": sdlc_db.get("overview"),
+            "requirements":     sdlc_db.get("requirements"),
+            "user_research":    sdlc_db.get("user_research"),
+            "task_flows":       sdlc_db.get("task_flows"),
+            "user_stories":     sdlc_db.get("user_stories"),
         }
         _current_project_id = project_id
+
 
     return jsonify({
         "project": project,
@@ -388,6 +400,113 @@ def api_stream():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+
+# ============================================
+# SDLC STAGE ROUTES
+# ============================================
+
+SDLC_STAGE_KEYS = {
+    "overview":      "project_overview",
+    "requirements":  "requirements",
+    "user_research": "user_research",
+    "task_flows":    "task_flows",
+    "user_stories":  "user_stories",
+}
+
+
+@app.route("/api/stages", methods=["GET"])
+def api_stages_list():
+    """Return status of all SDLC stages for the current project."""
+    stages = {}
+    for stage_name, state_key in SDLC_STAGE_KEYS.items():
+        data = _current_state.get(state_key)
+        stages[stage_name] = {
+            "completed": data is not None,
+            "data": data,
+        }
+    return jsonify({"stages": stages, "project_name": _current_state.get("project_name", "")})
+
+
+@app.route("/api/stages/overview", methods=["GET"])
+def api_stages_overview():
+    """Return a summary of all SDLC stages (names + completion status only)."""
+    overview = {}
+    for stage_name, state_key in SDLC_STAGE_KEYS.items():
+        overview[stage_name] = _current_state.get(state_key) is not None
+    return jsonify({
+        "stages": overview,
+        "project_name": _current_state.get("project_name", ""),
+        "user_prompt": _current_state.get("user_prompt", ""),
+    })
+
+
+@app.route("/api/stages/<stage_name>", methods=["GET"])
+def api_stage_detail(stage_name):
+    """Return the stored output for a specific SDLC stage."""
+    state_key = SDLC_STAGE_KEYS.get(stage_name)
+    if not state_key:
+        return jsonify({"error": f"Unknown stage: {stage_name}"}), 400
+
+    data = _current_state.get(state_key)
+    return jsonify({
+        "stage": stage_name,
+        "completed": data is not None,
+        "data": data,
+    })
+
+
+@app.route("/api/stages/run/<stage_name>", methods=["POST"])
+def api_run_stage(stage_name):
+    """Run a specific SDLC stage and store the result in _current_state."""
+    global _generation_active
+
+    if stage_name not in SDLC_STAGE_KEYS:
+        return jsonify({"error": f"Unknown stage: {stage_name}"}), 400
+
+    if _generation_active:
+        return jsonify({"error": "Generation already in progress"}), 400
+
+    data = request.get_json() or {}
+    user_prompt = data.get("prompt", _current_state.get("user_prompt", "")).strip()
+    project_name = data.get("project_name", _current_state.get("project_name", ""))
+
+    if not user_prompt:
+        return jsonify({"error": "prompt is required"}), 400
+
+    # Persist the prompt in global state so subsequent stages have context
+    with _generation_lock:
+        _current_state["user_prompt"] = user_prompt
+        if project_name:
+            _current_state["project_name"] = project_name
+
+    # Run in background thread
+    th = threading.Thread(
+        target=_run_stage_background,
+        args=(stage_name, user_prompt),
+        daemon=True,
+    )
+    th.start()
+
+    return jsonify({"status": "started", "stage": stage_name})
+
+
+@app.route("/api/stages/generate", methods=["POST"])
+def api_stages_generate():
+    """Trigger the code generation pipeline after SDLC stages are completed."""
+    global _generation_active
+
+    if _generation_active:
+        return jsonify({"error": "Generation already in progress"}), 400
+
+    th = threading.Thread(target=_run_code_generation, daemon=True)
+    th.start()
+
+    return jsonify({"status": "started", "stage": "code"})
+
+
+# ============================================
 
 
 # ============================================
@@ -584,6 +703,148 @@ def _run_chat(prompt: str):
             _generation_active = False
 
 
+def _run_stage_background(stage_name: str, user_prompt: str):
+    """Run a single SDLC stage in a background thread and update _current_state."""
+    global _generation_active, _current_state, _current_project_id
+
+    state_key = SDLC_STAGE_KEYS.get(stage_name)
+    if not state_key:
+        return
+
+    with _generation_lock:
+        _generation_active = True
+        _current_state["current_step"] = f"running_{stage_name}"
+
+    try:
+        from app.graph.graph import build_stage_graph
+
+        print(f"\n📋 Running SDLC stage: {stage_name}")
+        graph = build_stage_graph(stage_name)
+
+        # Build the input state for this stage — pass all existing context
+        input_state = _current_state.copy()
+        input_state["user_prompt"] = user_prompt
+
+        result = graph.invoke(input_state)
+
+        # Store result in _current_state
+        with _generation_lock:
+            _current_state.update(result)
+            _current_state["current_step"] = f"{stage_name}_complete"
+
+        stage_data = result.get(state_key)
+        print(f"   ✅ Stage '{stage_name}' complete")
+
+        # Persist to DB so it's available when the project is reloaded
+        if _current_project_id and stage_data:
+            try:
+                from app.core.database import save_sdlc_stage as _save_sdlc
+                _save_sdlc(_current_project_id, stage_name, stage_data)
+                print(f"   💾 Stage '{stage_name}' saved to DB")
+            except ImportError:
+                # Function doesn't exist yet — add it silently  
+                try:
+                    import sqlite3, json as _json
+                    from app.core.database import _get_conn, DB_PATH
+                    conn = _get_conn()
+                    now = __import__("datetime").datetime.utcnow().isoformat()
+                    try:
+                        conn.execute(
+                            """INSERT INTO sdlc_stages (project_id, stage_name, stage_data, created_at, updated_at)
+                               VALUES (?, ?, ?, ?, ?)
+                               ON CONFLICT(project_id, stage_name) DO UPDATE SET
+                                 stage_data=excluded.stage_data, updated_at=excluded.updated_at""",
+                            (_current_project_id, stage_name, _json.dumps(stage_data, default=str), now, now)
+                        )
+                        conn.commit()
+                        print(f"   💾 Stage '{stage_name}' saved to DB (direct)")
+                    finally:
+                        conn.close()
+                except Exception as db_err:
+                    print(f"   ⚠️ DB stage save error: {db_err}")
+
+    except Exception as e:
+        print(f"❌ Stage '{stage_name}' error: {e}")
+        import traceback
+        traceback.print_exc()
+        with _generation_lock:
+            _current_state["current_step"] = "error"
+            _current_state["error_message"] = str(e)
+
+    finally:
+        with _generation_lock:
+            _generation_active = False
+
+
+def _run_code_generation():
+    """Run only the code generation part (skipping SDLC nodes)."""
+    global _generation_active, _current_state, _current_project_id
+
+    with _generation_lock:
+        _generation_active = True
+        _current_state["current_step"] = "starting_code"
+
+    try:
+        from app.main import run_code_only_streaming
+
+        result = run_code_only_streaming(_current_state, _update_state)
+
+        with _generation_lock:
+            _current_state.update(result)
+            _current_state["current_step"] = "complete"
+
+        # Auto-start preview
+        try:
+            from app.graph.nodes.preview_node import preview_node as pn
+            print("\n🚀 Auto-starting preview...")
+            with _generation_lock:
+                _current_state["current_step"] = "preview_starting"
+            preview_result = pn(_current_state)
+            with _generation_lock:
+                _current_state.update(preview_result)
+            if preview_result.get("preview_started"):
+                print(f"   ✅ Preview: {preview_result.get('preview_url')}")
+        except Exception as prev_err:
+            print(f"   ⚠️ Auto-preview error: {prev_err}")
+
+        # Save or update project in DB
+        try:
+            p_name = result.get("project_name", _current_state.get("project_name", "Untitled"))
+            files = result.get("files", {})
+            p_dir = result.get("project_dir", "")
+            prompt = result.get("user_prompt", "")
+
+            if not _current_project_id:
+                pid = save_project(
+                    name=p_name, prompt=prompt, tech_stack="react-flask",
+                    files=files, messages=[],
+                    project_dir=p_dir, status="complete"
+                )
+                with _generation_lock:
+                    _current_project_id = pid
+                print(f"   💾 Saved new project to DB (ID: {pid})")
+            else:
+                from app.core.database import save_version
+                save_version(_current_project_id, files, label="Code Generated")
+                update_project(_current_project_id, files=files)
+                print(f"   💾 Updated project in DB (ID: {_current_project_id})")
+
+        except Exception as db_err:
+            print(f"   ⚠️ DB save error: {db_err}")
+
+    except Exception as e:
+        print(f"❌ Code Generation error: {e}")
+        import traceback
+        traceback.print_exc()
+        with _generation_lock:
+            _current_state["current_step"] = "error"
+            _current_state["error_message"] = str(e)
+
+    finally:
+        with _generation_lock:
+            _generation_active = False
+
+
 # ============================================
 # MAIN
 # ============================================
@@ -596,3 +857,4 @@ if __name__ == "__main__":
     print("=" * 60 + "\n")
 
     socketio.run(app, host="0.0.0.0", port=8080, debug=False)
+

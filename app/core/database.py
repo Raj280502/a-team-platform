@@ -438,3 +438,49 @@ def restore_version(project_id: str, version_num: int) -> dict | None:
     finally:
         conn.close()
 
+
+def load_sdlc_stages(project_id: str) -> dict:
+    """
+    Load all SDLC stage records for a project.
+    Returns a dict like {'overview': {...}, 'requirements': {...}, ...}
+    or an empty dict if no stages are saved yet.
+    """
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT stage_name, stage_data FROM sdlc_stages WHERE project_id = ?",
+            (project_id,)
+        ).fetchall()
+        result = {}
+        for row in rows:
+            try:
+                result[row['stage_name']] = json.loads(row['stage_data'])
+            except (json.JSONDecodeError, TypeError):
+                result[row['stage_name']] = None
+        return result
+    finally:
+        conn.close()
+
+
+def save_sdlc_stage(project_id: str, stage_name: str, stage_data: dict) -> None:
+    """
+    Save (or update) a single SDLC stage record for a project.
+    Uses UPSERT so calling it multiple times is safe.
+    """
+    conn = _get_conn()
+    now = datetime.utcnow().isoformat()
+    try:
+        conn.execute(
+            """INSERT INTO sdlc_stages (project_id, stage_name, stage_data, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(project_id, stage_name) DO UPDATE SET
+                 stage_data = excluded.stage_data,
+                 updated_at = excluded.updated_at""",
+            (project_id, stage_name, json.dumps(stage_data, default=str), now, now)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+
