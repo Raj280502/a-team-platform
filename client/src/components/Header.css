@@ -108,3 +108,23 @@
     border-right: 1px solid var(--border-color);
     border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
+
+.deploy-btn {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.deploy-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}

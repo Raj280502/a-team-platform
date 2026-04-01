@@ -1,0 +1,119 @@
+Traceback (most recent call last):
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 28, in _parse_obj
+    return self.pydantic_object.model_validate(obj)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\pydantic\main.py", line 705, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj, strict=strict, from_attributes=from_attributes, context=context, by_alias=by_alias, by_name=by_name
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 9 validation errors for StrategistOutput
+core_features.0
+  Input should be a valid string [type=string_type, input_value={'name': 'Increment Count...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.1
+  Input should be a valid string [type=string_type, input_value={'name': 'Decrement Count...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.2
+  Input should be a valid string [type=string_type, input_value={'name': 'Reset Counter',...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.3
+  Input should be a valid string [type=string_type, input_value={'name': 'Display Counter...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+data_models.0
+  Input should be a valid string [type=string_type, input_value={'name': 'Counter', 'fiel...value of the counter'}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.0
+  Input should be a valid string [type=string_type, input_value={'method': 'GET', 'path':...example': {'value': 0}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.1
+  Input should be a valid string [type=string_type, input_value={'method': 'PATCH', 'path...example': {'value': 1}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.2
+  Input should be a valid string [type=string_type, input_value={'method': 'POST', 'path'...example': {'value': 0}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+ui_style
+  Input should be a valid string [type=string_type, input_value={'theme': 'light', 'tone'... secondary color: gray'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\PROJECT_3rd\a-team-platform\test_strategist.py", line 25, in <module>
+    result = strategist_node(state)
+  File "E:\PROJECT_3rd\a-team-platform\app\graph\nodes\strategist_node.py", line 19, in strategist_node
+    result = strategist.invoke(
+        {"user_prompt": state["user_prompt"]}
+    )
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\runnables\base.py", line 3157, in invoke
+    input_ = context.run(step.invoke, input_, config)
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\output_parsers\base.py", line 207, in invoke
+    return self._call_with_config(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        lambda inner_input: self.parse_result(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        run_type="parser",
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\runnables\base.py", line 2060, in _call_with_config
+    context.run(
+    ~~~~~~~~~~~^
+        call_func_with_variable_args,  # type: ignore[arg-type]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    ),
+    ^
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\runnables\config.py", line 461, in call_func_with_variable_args
+    return func(input, **kwargs)  # type: ignore[call-arg]
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\output_parsers\base.py", line 208, in <lambda>
+    lambda inner_input: self.parse_result(
+                        ~~~~~~~~~~~~~~~~~^
+        [ChatGeneration(message=inner_input)]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ),
+    ^
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 76, in parse_result
+    return self._parse_obj(json_object)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\DARSHAN\miniconda3\conda\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 35, in _parse_obj
+    raise self._parser_exception(e, obj) from e
+langchain_core.exceptions.OutputParserException: Failed to parse StrategistOutput from completion {"project_goal": "A simple counter application that allows users to increment, decrement, and reset a counter.", "target_users": "General users who need a basic counter tool", "core_features": [{"name": "Increment Counter", "description": "User can click a button to increment the counter by 1", "acceptance_criteria": ["Counter value increases by 1 when button is clicked"], "priority": "must-have"}, {"name": "Decrement Counter", "description": "User can click a button to decrement the counter by 1", "acceptance_criteria": ["Counter value decreases by 1 when button is clicked"], "priority": "must-have"}, {"name": "Reset Counter", "description": "User can click a button to reset the counter to 0", "acceptance_criteria": ["Counter value resets to 0 when button is clicked"], "priority": "must-have"}, {"name": "Display Counter Value", "description": "The current counter value is displayed on the screen", "acceptance_criteria": ["Counter value is displayed on the screen"], "priority": "must-have"}], "pages": [{"name": "Counter", "route": "/", "description": "A simple page with increment, decrement, and reset buttons, and a display of the current counter value", "components": ["CounterDisplay", "IncrementButton", "DecrementButton", "ResetButton"], "states": ["empty", "loading", "error", "success"]}], "data_models": [{"name": "Counter", "fields": [{"name": "value", "type": "number", "required": true, "description": "The current value of the counter"}]}], "api_endpoints": [{"method": "GET", "path": "/api/counter", "purpose": "Get the current counter value", "request_body": null, "response_body": {"example": {"value": 0}}}, {"method": "PATCH", "path": "/api/counter", "purpose": "Increment or decrement the counter value", "request_body": {"example": {"action": "increment"}}, "response_body": {"example": {"value": 1}}}, {"method": "POST", "path": "/api/counter/reset", "purpose": "Reset the counter value to 0", "request_body": null, "response_body": {"example": {"value": 0}}}], "ui_style": {"theme": "light", "tone": "simple", "color_notes": "primary color: blue, secondary color: gray"}, "technical_constraints": ["Client-side rendering", "Use React for the frontend", "Use Flask for the backend"], "assumptions": ["The counter will not be used for critical applications", "The counter will not be used by a large number of users simultaneously"]}. Got: 9 validation errors for StrategistOutput
+core_features.0
+  Input should be a valid string [type=string_type, input_value={'name': 'Increment Count...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.1
+  Input should be a valid string [type=string_type, input_value={'name': 'Decrement Count...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.2
+  Input should be a valid string [type=string_type, input_value={'name': 'Reset Counter',...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+core_features.3
+  Input should be a valid string [type=string_type, input_value={'name': 'Display Counter...'priority': 'must-have'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+data_models.0
+  Input should be a valid string [type=string_type, input_value={'name': 'Counter', 'fiel...value of the counter'}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.0
+  Input should be a valid string [type=string_type, input_value={'method': 'GET', 'path':...example': {'value': 0}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.1
+  Input should be a valid string [type=string_type, input_value={'method': 'PATCH', 'path...example': {'value': 1}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+api_endpoints.2
+  Input should be a valid string [type=string_type, input_value={'method': 'POST', 'path'...example': {'value': 0}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+ui_style
+  Input should be a valid string [type=string_type, input_value={'theme': 'light', 'tone'... secondary color: gray'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Γ£à Configuration module loaded.
+   LLM Provider: groq (llama-3.3-70b-versatile)
+   SDLC Provider: Groq (llama-3.1-8b-instant) ΓÇö smaller model for rate limits
+
+≡ƒºá STRATEGIST: Analyzing requirements...

@@ -302,6 +302,241 @@ def api_project_delete(project_id):
     return jsonify({"status": "deleted", "id": project_id})
 
 
+# ============================================
+# VERSION HISTORY ROUTES
+# ============================================
+
+@app.route("/api/projects/<project_id>/versions")
+def api_project_versions(project_id):
+    """List all versions for a project."""
+    from app.core.database import list_versions
+    versions = list_versions(project_id)
+    return jsonify({"versions": versions})
+
+
+@app.route("/api/projects/<project_id>/versions", methods=["POST"])
+def api_project_save_version(project_id):
+    """Save current files as a new version snapshot."""
+    from app.core.database import save_version
+
+    data = request.get_json() or {}
+    label = data.get("label", "")
+
+    # Get current files from state or DB
+    files = _current_state.get("files", {})
+    if not files:
+        proj = load_project(project_id)
+        if proj:
+            files = proj.get("files", {})
+
+    if not files:
+        return jsonify({"error": "No files to snapshot"}), 400
+
+    ver = save_version(project_id, files, label=label)
+    return jsonify({"status": "saved", "version_num": ver})
+
+
+@app.route("/api/projects/<project_id>/versions/<int:version_num>/restore", methods=["POST"])
+def api_project_restore_version(project_id, version_num):
+    """Restore files from a specific version. Current files are saved first."""
+    from app.core.database import save_version, restore_version
+
+    # Save current state before restoring
+    current_files = _current_state.get("files", {})
+    if current_files:
+        save_version(project_id, current_files, label="Auto-save before restore")
+
+    restored_files = restore_version(project_id, version_num)
+    if restored_files is None:
+        return jsonify({"error": "Version not found"}), 404
+
+    # Update in-memory state
+    with _generation_lock:
+        _current_state["files"] = restored_files
+
+    # Write restored files to disk if project_dir exists
+    project_dir = _current_state.get("project_dir")
+    if project_dir:
+        for fp, content in restored_files.items():
+            full_path = Path(project_dir) / fp
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(content, encoding="utf-8")
+
+    return jsonify({"status": "restored", "version_num": version_num, "file_count": len(restored_files)})
+
+
+# ============================================
+# PER-PROJECT DOWNLOAD
+# ============================================
+
+@app.route("/api/projects/<project_id>/download")
+def api_project_download(project_id):
+    """Download a specific project from the database as a ZIP."""
+    proj = load_project(project_id)
+    if not proj:
+        return jsonify({"error": "Project not found"}), 404
+
+    project = proj["project"]
+    files = proj["files"]
+    project_name = project.get("name", "project")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for file_path, content in files.items():
+            zipf.writestr(f"{project_name}/{file_path}", content)
+
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{project_name}.zip",
+    )
+
+
+# ============================================
+# DEPLOYMENT ROUTES
+# ============================================
+
+@app.route("/api/deploy/configs", methods=["POST"])
+def api_deploy_configs():
+    """Generate deployment configuration files for the current project."""
+    files = _current_state.get("files", {})
+    project_dir = _current_state.get("project_dir", "")
+    project_name = _current_state.get("project_name", "my-app")
+
+    if not files:
+        return jsonify({"error": "No project loaded"}), 400
+
+    generated_configs = {}
+
+    # --- vercel.json ---
+    vercel_config = json.dumps({
+        "version": 2,
+        "builds": [
+            {
+                "src": "backend/app.py",
+                "use": "@vercel/python"
+            },
+            {
+                "src": "frontend/package.json",
+                "use": "@vercel/static-build",
+                "config": {"distDir": "dist"}
+            }
+        ],
+        "routes": [
+            {"src": "/api/(.*)", "dest": "backend/app.py"},
+            {"src": "/(.*)", "dest": "frontend/$1"}
+        ]
+    }, indent=2)
+    generated_configs["vercel.json"] = vercel_config
+
+    # --- Dockerfile ---
+    dockerfile = """# Multi-stage Dockerfile for AI Code Factory generated project
+FROM node:18-slim AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci --production=false
+COPY frontend/ ./
+RUN npm run build
+
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install backend dependencies
+COPY backend/requirements.txt ./backend/
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Copy backend code
+COPY backend/ ./backend/
+
+# Copy frontend build
+COPY --from=frontend-build /app/frontend/dist ./frontend/dist
+
+# Expose port
+EXPOSE 5000
+
+# Start Flask server
+CMD ["python", "backend/app.py"]
+"""
+    generated_configs["Dockerfile"] = dockerfile
+
+    # --- docker-compose.yml ---
+    docker_compose = f"""version: '3.8'
+services:
+  app:
+    build: .
+    container_name: {project_name}
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+"""
+    generated_configs["docker-compose.yml"] = docker_compose
+
+    # --- railway.json ---
+    railway_config = json.dumps({
+        "$schema": "https://railway.app/railway.schema.json",
+        "build": {"builder": "DOCKERFILE", "dockerfilePath": "Dockerfile"},
+        "deploy": {"startCommand": "python backend/app.py", "restartPolicyType": "ON_FAILURE"}
+    }, indent=2)
+    generated_configs["railway.json"] = railway_config
+
+    # --- Procfile (Heroku/Railway) ---
+    generated_configs["Procfile"] = "web: python backend/app.py"
+
+    # --- .dockerignore ---
+    generated_configs[".dockerignore"] = """node_modules
+__pycache__
+*.pyc
+.env
+.git
+.venv
+"""
+
+    # Write configs to disk if project_dir exists
+    if project_dir and Path(project_dir).exists():
+        for fname, content in generated_configs.items():
+            fpath = Path(project_dir) / fname
+            fpath.write_text(content, encoding="utf-8")
+
+    # Also add to in-memory state
+    with _generation_lock:
+        for fname, content in generated_configs.items():
+            _current_state.setdefault("files", {})[fname] = content
+
+    return jsonify({
+        "status": "generated",
+        "configs": list(generated_configs.keys()),
+        "files": generated_configs,
+    })
+
+
+@app.route("/api/deploy/download-ready", methods=["POST"])
+def api_deploy_download_ready():
+    """Create a deployment-ready ZIP with configs included."""
+    project_dir = _current_state.get("project_dir")
+    project_name = _current_state.get("project_name", "project")
+    files = _current_state.get("files", {})
+
+    if not files:
+        return jsonify({"error": "No project to package"}), 400
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for file_path, content in files.items():
+            zipf.writestr(f"{project_name}/{file_path}", content)
+
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{project_name}-deploy.zip",
+    )
+
+
 @app.route("/api/preview/start", methods=["POST"])
 def api_preview_start():
     """Start the preview servers."""

@@ -6,6 +6,8 @@ import CodePanel from './components/CodePanel'
 import PreviewPanel from './components/PreviewPanel'
 import StatusBar from './components/StatusBar'
 import ResizeHandle from './components/ResizeHandle'
+import VersionHistory from './components/VersionHistory'
+import DeployModal from './components/DeployModal'
 import ProjectsPage from './pages/ProjectsPage'
 import { useGeneration } from './hooks/useGeneration'
 import './App.css'
@@ -17,6 +19,8 @@ function EditorView() {
   const [previewWidth, setPreviewWidth] = useState(420)
   const [activeFile, setActiveFile] = useState(null)
   const [openTabs, setOpenTabs] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [showDeploy, setShowDeploy] = useState(false)
   const chatRef = useRef(null)
 
   const {
@@ -33,6 +37,7 @@ function EditorView() {
     startPreview,
     testsStatus,
     loadProject,
+    loadFiles,
   } = useGeneration()
 
   // Load project from DB if projectId is in the URL
@@ -66,6 +71,12 @@ function EditorView() {
     }
   }, [files, activeFile, handleOpenFile])
 
+  const handleVersionRestore = useCallback(() => {
+    // Reload files after version restore
+    if (loadFiles) loadFiles()
+    if (projectId) loadProject(projectId)
+  }, [loadFiles, loadProject, projectId])
+
   return (
     <div className="app-layout">
       <Header
@@ -75,6 +86,8 @@ function EditorView() {
         hasFiles={Object.keys(files).length > 0}
         onGoBack={() => navigate('/')}
         previewLoading={previewLoading}
+        onToggleHistory={projectId ? () => setShowHistory(prev => !prev) : undefined}
+        onToggleDeploy={() => setShowDeploy(true)}
       />
 
       <div className="workspace">
@@ -118,6 +131,27 @@ function EditorView() {
         filesCount={Object.keys(files).length}
         testsStatus={testsStatus}
       />
+
+      {/* Version History Slide-Over Panel */}
+      {showHistory && projectId && (
+        <div className="history-panel-overlay" onClick={() => setShowHistory(false)}>
+          <div className="history-panel" onClick={(e) => e.stopPropagation()}>
+            <VersionHistory
+              projectId={projectId}
+              onRestore={handleVersionRestore}
+              onClose={() => setShowHistory(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Deploy Modal */}
+      {showDeploy && (
+        <DeployModal
+          onClose={() => setShowDeploy(false)}
+          projectName={projectName}
+        />
+      )}
     </div>
   )
 }

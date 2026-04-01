@@ -2,7 +2,12 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 
 const STEP_LABELS = {
     starting: '🚀 Starting generation...',
-    strategist_complete: '🧠 Requirements analyzed',
+    overview_complete: '📋 Project overview generated',
+    requirements_complete: '🎯 Requirements gathered',
+    user_research_complete: '👥 User research completed',
+    task_flows_complete: '🔄 Task flows mapped',
+    user_stories_complete: '📚 User stories written',
+    strategist_complete: '🧠 Technical scope analyzed',
     architect_complete: '📐 Architecture designed',
     coder_plan_ready: '📋 File plan ready',
     coder_complete: '🔨 Code generated',

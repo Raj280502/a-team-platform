@@ -86,14 +86,21 @@ STAGE_LABELS = {
 
 def build_graph():
     """
-    Builds the code generation pipeline (runs AFTER SDLC planning stages):
+    Builds the complete generation pipeline including prepended SDLC planning stages:
     
-    strategist → architect → coder_plan → coder_file → write_files → test
-                                                                        ↓
-                                                                  [pass] → preview → end
-                                                                  [fail] → repair → coder_file → ...
+    overview → requirements → user_research → task_flows → user_stories → strategist → architect → coder_plan → coder_file → write_files → test
+                                                                                                                        ↓
+                                                                                                                  [pass] → preview → end
+                                                                                                                  [fail] → repair → ...
     """
     graph = StateGraph(ProjectState)
+
+    # ═══════════ PHASE 0: SDLC PLANNING ═══════════
+    graph.add_node("overview", overview_node)
+    graph.add_node("requirements", requirements_node)
+    graph.add_node("user_research", user_research_node)
+    graph.add_node("task_flows", task_flows_node)
+    graph.add_node("user_stories", user_stories_node)
 
     # ═══════════ PHASE 1: COGNITION ═══════════
     graph.add_node("strategist", strategist_node)
@@ -117,7 +124,13 @@ def build_graph():
     graph.add_node("end", end_node)
 
     # ═══════════ EDGES ═══════════
-    graph.set_entry_point("strategist")
+    graph.set_entry_point("overview")
+    graph.add_edge("overview", "requirements")
+    graph.add_edge("requirements", "user_research")
+    graph.add_edge("user_research", "task_flows")
+    graph.add_edge("task_flows", "user_stories")
+    graph.add_edge("user_stories", "strategist")
+    
     graph.add_edge("strategist", "architect")
     graph.add_edge("architect", "coder_plan")
     graph.add_edge("coder_plan", "coder_file")

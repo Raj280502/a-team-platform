@@ -43,8 +43,7 @@ export default function ProjectsPage() {
 
     const handleDownload = (e, projectId) => {
         e.stopPropagation()
-        // TODO: implement per-project download from DB
-        window.open('/api/download', '_blank')
+        window.open(`/api/projects/${projectId}/download`, '_blank')
     }
 
     const filtered = projects.filter(p =>
