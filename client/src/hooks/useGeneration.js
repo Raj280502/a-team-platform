@@ -34,6 +34,11 @@ export function useGeneration() {
     const [testsStatus, setTestsStatus] = useState(null)
     const eventSourceRef = useRef(null)
 
+    // SDLC Stage Tracking
+    const [activeStage, setActiveStage] = useState('overview')
+    const [completedStages, setCompletedStages] = useState([])
+    const [stageData, setStageData] = useState({})
+
     // Add a message to the chat
     const addMessage = useCallback((role, text, type = 'message') => {
         setMessages(prev => [...prev, { id: Date.now(), role, text, type, ts: new Date() }])
@@ -72,6 +77,29 @@ export function useGeneration() {
         if (msgMatch) return msgMatch[1]
         // Fallback
         return str.length > 200 ? str.substring(0, 200) + '...' : str
+    }, [])
+
+    // Fetch SDLC stages from backend
+    const fetchStages = useCallback(async () => {
+        try {
+            const res = await fetch('/api/stages')
+            if (res.ok) {
+                const data = await res.json()
+                const completed = []
+                const sData = {}
+                Object.entries(data.stages || {}).forEach(([key, val]) => {
+                    if (val.completed) {
+                        completed.push(key)
+                        sData[key] = val.data
+                    }
+                })
+                setCompletedStages(completed)
+                setStageData(sData)
+                if (data.project_name) setProjectName(data.project_name)
+            }
+        } catch (e) {
+            console.error('Failed to fetch stages:', e)
+        }
     }, [])
 
     // Load files from API
@@ -119,6 +147,10 @@ export function useGeneration() {
                 } else if (data.step === 'preview_failed') {
                     setPreviewLoading(false)
                     setPreviewError('Preview servers failed to start')
+                }
+
+                if (data.step.endsWith('_complete') && !data.step.includes('chat') && !data.step.includes('repair') && !data.step.includes('coder') && !data.step.includes('preview')) {
+                    fetchStages()
                 }
             }
 
@@ -176,16 +208,22 @@ export function useGeneration() {
         }
     }, [addStep, loadFiles, markAllStepsDone])
 
-    // Send a prompt
-    const sendPrompt = useCallback(async (text) => {
-        if (!text.trim() || isGenerating) return
+    // Send a prompt or run a specific stage
+    const sendPrompt = useCallback(async (text, targetStage = null) => {
+        if (!text.trim() && !targetStage) return
+        if (isGenerating) return
 
-        addMessage('user', text)
+        if (text) addMessage('user', text)
         setIsGenerating(true)
         setStatus('generating')
 
-        const hasFiles = Object.keys(files).length > 0
-        const endpoint = hasFiles ? '/api/chat' : '/api/generate'
+        let endpoint = ''
+        if (targetStage) {
+            endpoint = targetStage === 'code' ? '/api/stages/generate' : `/api/stages/run/${targetStage}`
+        } else {
+            const hasFiles = Object.keys(files).length > 0
+            endpoint = hasFiles ? '/api/chat' : '/api/generate'
+        }
 
         addStep('🧠 Analyzing your request...')
         startStream()
@@ -203,6 +241,8 @@ export function useGeneration() {
                 setStatus('error')
                 markAllStepsDone()
                 addStep('❌ ' + parseErrorMessage(data.error), true)
+            } else if (targetStage) {
+                setActiveStage(targetStage) // Ensure UI jumps to this stage
             }
         } catch (err) {
             setIsGenerating(false)
@@ -279,6 +319,12 @@ export function useGeneration() {
             setStatus('complete')
             setCurrentStep('complete')
             setIsGenerating(false)
+            
+            // Sync stages and set UI to code editor if it's already an existing app with files
+            await fetchStages()
+            if (data.files && Object.keys(data.files).length > 0) {
+                setActiveStage('code')
+            }
         } catch (err) {
             console.error('Load project error:', err)
         }
@@ -307,6 +353,13 @@ export function useGeneration() {
         testsStatus,
         loadFiles,
         loadProject,
+        
+        // Stage outputs
+        activeStage,
+        setActiveStage,
+        completedStages,
+        stageData,
+        fetchStages
     }
 }
 

@@ -9,6 +9,12 @@ import ResizeHandle from './components/ResizeHandle'
 import VersionHistory from './components/VersionHistory'
 import DeployModal from './components/DeployModal'
 import ProjectsPage from './pages/ProjectsPage'
+import StageSidebar from './components/StageSidebar'
+import OverviewPage from './pages/stages/OverviewPage'
+import RequirementsPage from './pages/stages/RequirementsPage'
+import UserResearchPage from './pages/stages/UserResearchPage'
+import TaskFlowsPage from './pages/stages/TaskFlowsPage'
+import UserStoriesPage from './pages/stages/UserStoriesPage'
 import { useGeneration } from './hooks/useGeneration'
 import './App.css'
 
@@ -38,6 +44,11 @@ function EditorView() {
     testsStatus,
     loadProject,
     loadFiles,
+    activeStage,
+    setActiveStage,
+    completedStages,
+    stageData,
+    fetchStages,
   } = useGeneration()
 
   // Load project from DB if projectId is in the URL
@@ -91,38 +102,89 @@ function EditorView() {
       />
 
       <div className="workspace">
+        <StageSidebar
+          activeStage={activeStage}
+          completedStages={completedStages}
+          runningStage={isGenerating ? (currentStep || '').replace('running_', '').replace('_complete', '') : null}
+          onStageClick={setActiveStage}
+        />
+
         <ChatPanel
           ref={chatRef}
           width={chatWidth}
           messages={messages}
           isGenerating={isGenerating}
-          onSend={sendPrompt}
+          onSend={(text) => sendPrompt(text, activeStage)}
         />
+        <ResizeHandle onResize={(dx) => setChatWidth(w => Math.max(300, Math.min(600, w + dx)))} />
 
-        <ResizeHandle
-          onResize={(dx) => setChatWidth(w => Math.max(300, Math.min(600, w + dx)))}
-        />
+        <div className="main-content" style={{ flex: 1, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {activeStage === 'overview' && (
+            <OverviewPage
+              data={stageData.overview}
+              isLoading={currentStep === 'running_overview'}
+              onNext={() => setActiveStage('requirements')}
+              onGenerate={() => sendPrompt('Generate Requirements based on overview', 'requirements')}
+            />
+          )}
 
-        <CodePanel
-          files={files}
-          activeFile={activeFile}
-          openTabs={openTabs}
-          onOpenFile={handleOpenFile}
-          onCloseTab={handleCloseTab}
-        />
+          {activeStage === 'requirements' && (
+            <RequirementsPage
+              data={stageData.requirements}
+              isLoading={currentStep === 'running_requirements'}
+              onNext={() => setActiveStage('user_research')}
+              onGenerate={() => sendPrompt('Generate User Research based on requirements', 'user_research')}
+            />
+          )}
 
-        <ResizeHandle
-          onResize={(dx) => setPreviewWidth(w => Math.max(280, Math.min(700, w - dx)))}
-        />
+          {activeStage === 'user_research' && (
+            <UserResearchPage
+              data={stageData.user_research}
+              isLoading={currentStep === 'running_user_research'}
+              onNext={() => setActiveStage('task_flows')}
+              onGenerate={() => sendPrompt('Generate Task Flows based on user research', 'task_flows')}
+            />
+          )}
 
-        <PreviewPanel
-          width={previewWidth}
-          previewUrl={previewUrl}
-          previewLoading={previewLoading}
-          previewError={previewError}
-          onStartPreview={startPreview}
-          hasFiles={Object.keys(files).length > 0}
-        />
+          {activeStage === 'task_flows' && (
+            <TaskFlowsPage
+              data={stageData.task_flows}
+              isLoading={currentStep === 'running_task_flows'}
+              onNext={() => setActiveStage('user_stories')}
+              onGenerate={() => sendPrompt('Generate User Stories based on task flows', 'user_stories')}
+            />
+          )}
+
+          {activeStage === 'user_stories' && (
+            <UserStoriesPage
+              data={stageData.user_stories}
+              isLoading={currentStep === 'running_user_stories'}
+              onNext={() => setActiveStage('code')}
+              onGenerate={() => sendPrompt('Generate Code implementation', 'code')}
+            />
+          )}
+
+          {(activeStage === 'code' || activeStage === 'preview') && (
+            <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+              <CodePanel
+                files={files}
+                activeFile={activeFile}
+                openTabs={openTabs}
+                onOpenFile={handleOpenFile}
+                onCloseTab={handleCloseTab}
+              />
+              <ResizeHandle onResize={(dx) => setPreviewWidth(w => Math.max(280, Math.min(700, w - dx)))} />
+              <PreviewPanel
+                width={previewWidth}
+                previewUrl={previewUrl}
+                previewLoading={previewLoading}
+                previewError={previewError}
+                onStartPreview={startPreview}
+                hasFiles={Object.keys(files).length > 0}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <StatusBar
